@@ -17,7 +17,9 @@ from app.shared.base_model import Base
 # reusing all other connection parameters (host, port, credentials).
 _base_url = make_url(settings.DATABASE_URL)
 _test_db_name = f"{_base_url.database}_test"
-_TEST_DATABASE_URL = str(_base_url.set(database=_test_db_name))
+# Keep as URL objects — str(URL) masks the password with "***" in SQLAlchemy
+# 2.0, which causes every connection to fail authentication.
+_TEST_DATABASE_URL = _base_url.set(database=_test_db_name)
 
 
 @pytest.fixture(scope="session")
@@ -27,10 +29,11 @@ def engine():
     Tables are dropped on teardown so the next run starts from a known state.
     """
     # AUTOCOMMIT is required — PostgreSQL cannot run CREATE DATABASE inside
-    # a transaction.  Connecting to the default 'postgres' maintenance database
-    # ensures we are not inside the database we are about to create.
+    # a transaction.  We connect to the application database itself (not the
+    # 'postgres' maintenance database) because we're only creating/dropping
+    # `applytrack_test`, never `applytrack`.
     admin_engine = create_engine(
-        str(_base_url.set(database="postgres")),
+        _base_url,
         isolation_level="AUTOCOMMIT",
     )
     with admin_engine.connect() as conn:
