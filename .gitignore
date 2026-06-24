@@ -1,0 +1,54 @@
+# --- Environment ---------------------------------------------------
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Python --------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.eggs/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# --- Node ----------------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# --- Docker --------------------------------------------------------
+docker-compose.override.yml
+
+# --- IDEs ----------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+
+# --- OS ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ----------------------------------------------------------
+*.log
+logs/
+
+# --- Database ------------------------------------------------------
+*.sqlite3
+*.db
