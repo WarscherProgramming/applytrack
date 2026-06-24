@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.exceptions.handlers import register_exception_handlers
+from app.features.companies.router import router as companies_router
 
 configure_logging()
 
@@ -42,8 +43,7 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-# Feature routers are registered here as features are built.
-# Example: app.include_router(applications_router, prefix=settings.API_V1_PREFIX)
+app.include_router(companies_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["infrastructure"])
