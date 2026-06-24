@@ -10,6 +10,7 @@ from app.core.logging import configure_logging
 from app.exceptions.handlers import register_exception_handlers
 from app.features.applications.router import router as applications_router
 from app.features.companies.router import router as companies_router
+from app.features.recruiters.router import router as recruiters_router
 
 configure_logging()
 
@@ -46,6 +47,7 @@ register_exception_handlers(app)
 
 app.include_router(companies_router, prefix=settings.API_V1_PREFIX)
 app.include_router(applications_router, prefix=settings.API_V1_PREFIX)
+app.include_router(recruiters_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["infrastructure"])
