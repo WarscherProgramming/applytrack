@@ -9,3 +9,4 @@ from app.shared.base_model import Base  # noqa: F401
 from app.features.companies.model import Company  # noqa: F401
 from app.features.applications.model import JobApplication  # noqa: F401
 from app.features.recruiters.model import Recruiter  # noqa: F401
+from app.features.interviews.model import Interview  # noqa: F401
