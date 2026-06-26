@@ -36,3 +36,19 @@ export interface InterviewListParams extends PaginationParams {
   status?: InterviewStatus;
   interview_type?: InterviewType;
 }
+
+export interface InterviewCreateInput {
+  application_id: string;
+  recruiter_id?: string | null;
+  interview_type?: InterviewType | null;
+  scheduled_at: string;
+  duration_minutes?: number;
+  location?: string | null;
+  meeting_link?: string | null;
+  status?: InterviewStatus;
+  notes?: string | null;
+  feedback?: string | null;
+}
+
+/** Partial update — only provided fields are written (PATCH semantics). */
+export type InterviewUpdateInput = Partial<InterviewCreateInput>;
