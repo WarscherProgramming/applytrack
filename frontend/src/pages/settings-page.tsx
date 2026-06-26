@@ -9,6 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { EmailTimeline } from '@/features/gmail/components/email-timeline';
+import { GmailSettingsCard } from '@/features/gmail/components/gmail-settings-card';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -79,6 +81,15 @@ export function SettingsPage() {
           </dl>
         </CardContent>
       </Card>
+
+      <GmailSettingsCard />
+
+      {/* Global imported-email timeline. The same component scopes to a single
+          entity via an id prop, ready to embed in detail views. */}
+      <EmailTimeline
+        title="Imported emails"
+        description="All job-related emails imported from Gmail, grouped by conversation."
+      />
     </div>
   );
 }

@@ -29,6 +29,26 @@ class Settings(BaseSettings):
     # CORS — stored as a JSON string in the env file, parsed below
     BACKEND_CORS_ORIGINS: list[str] = []
 
+    # Google / Gmail integration.
+    # When client id/secret are unset (or GMAIL_SIMULATION is true) the Gmail
+    # feature runs in simulation mode: a fake client seeds realistic job emails
+    # so the whole pipeline (connect → sync → match → timeline) works locally
+    # without real Google credentials.
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/gmail/callback"
+    GMAIL_SIMULATION: bool = True
+
+    @property
+    def gmail_configured(self) -> bool:
+        """True when real Google OAuth credentials are present."""
+        return bool(self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_SECRET)
+
+    @property
+    def gmail_simulation(self) -> bool:
+        """Use the fake client unless explicitly disabled AND creds exist."""
+        return self.GMAIL_SIMULATION or not self.gmail_configured
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> list[str]:

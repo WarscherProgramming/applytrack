@@ -11,3 +11,4 @@ from app.features.applications.model import JobApplication  # noqa: F401
 from app.features.recruiters.model import Recruiter  # noqa: F401
 from app.features.interviews.model import Interview  # noqa: F401
 from app.features.followups.model import FollowUp  # noqa: F401
+from app.features.gmail.models import EmailMessage, GmailAccount  # noqa: F401
