@@ -30,3 +30,18 @@ export interface ApplicationListParams extends PaginationParams {
   status?: ApplicationStatus;
   company_id?: string;
 }
+
+export interface ApplicationCreateInput {
+  company_id: string;
+  job_title: string;
+  job_link?: string | null;
+  location?: string | null;
+  salary_range?: string | null;
+  status?: ApplicationStatus;
+  date_applied?: string | null;
+  source?: string | null;
+  notes?: string | null;
+}
+
+/** Partial update — only provided fields are written (PATCH semantics). */
+export type ApplicationUpdateInput = Partial<ApplicationCreateInput>;
