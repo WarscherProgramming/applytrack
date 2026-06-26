@@ -1,5 +1,5 @@
 import { Search, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Ref } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,10 @@ interface SearchBarProps {
   /** Debounce delay in ms; set 0 to fire on every keystroke. */
   debounceMs?: number;
   className?: string;
+  /** Forwarded to the underlying input so callers can focus it (shortcuts). */
+  inputRef?: Ref<HTMLInputElement>;
+  /** Optional key hint (e.g. "/") shown on the right while the field is empty. */
+  shortcutHint?: string;
 }
 
 /**
@@ -27,6 +31,8 @@ export function SearchBar({
   placeholder = 'Search…',
   debounceMs = 300,
   className,
+  inputRef,
+  shortcutHint,
 }: SearchBarProps) {
   const [text, setText] = useState(value);
 
@@ -43,10 +49,13 @@ export function SearchBar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, debounceMs]);
 
+  const showHint = shortcutHint && !text;
+
   return (
     <div className={cn('relative w-full sm:max-w-xs', className)}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
+        ref={inputRef}
         type="search"
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -68,6 +77,11 @@ export function SearchBar({
         >
           <X className="h-4 w-4" />
         </Button>
+      ) : null}
+      {showHint ? (
+        <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 select-none rounded border bg-muted px-1.5 font-mono text-xs text-muted-foreground sm:inline-block">
+          {shortcutHint}
+        </kbd>
       ) : null}
     </div>
   );

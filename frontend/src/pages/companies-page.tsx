@@ -6,7 +6,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { ConfirmDeleteDialog } from '@/components/common/confirm-delete-dialog';
 import { DataTable, type DataTableColumn } from '@/components/common/data-table';
@@ -29,6 +29,7 @@ import {
 } from '@/features/companies/hooks/use-companies';
 import type { Company } from '@/features/companies/types/company.types';
 import { getErrorMessage } from '@/lib/errors';
+import { useHotkeys } from '@/hooks/use-hotkeys';
 import { useToast } from '@/hooks/use-toast';
 import { formatDate } from '@/utils/format';
 
@@ -44,6 +45,22 @@ export function CompaniesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
   const [deleting, setDeleting] = useState<Company | null>(null);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcuts: "/" focuses search, "c" opens the create dialog.
+  // Disabled while a dialog is open so it can't fire behind a modal.
+  const dialogOpen = formOpen || Boolean(deleting);
+  useHotkeys(
+    {
+      '/': (e) => {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      },
+      c: () => openCreate(),
+    },
+    !dialogOpen,
+  );
 
   const { data, isLoading, isError, error, refetch, isFetching } = useCompanies({
     query: query || undefined,
@@ -94,16 +111,19 @@ export function CompaniesPage() {
       id: 'name',
       header: 'Name',
       cell: (c) => <span className="font-medium">{c.name}</span>,
+      sortAccessor: (c) => c.name,
     },
     {
       id: 'industry',
       header: 'Industry',
       cell: (c) => c.industry ?? <span className="text-muted-foreground">—</span>,
+      sortAccessor: (c) => c.industry,
     },
     {
       id: 'location',
       header: 'Location',
       cell: (c) => c.location ?? <span className="text-muted-foreground">—</span>,
+      sortAccessor: (c) => c.location,
     },
     {
       id: 'website',
@@ -129,6 +149,8 @@ export function CompaniesPage() {
       cell: (c) => (
         <span className="text-muted-foreground">{formatDate(c.created_at)}</span>
       ),
+      // ISO timestamps sort lexicographically in chronological order.
+      sortAccessor: (c) => c.created_at,
     },
     {
       id: 'actions',
@@ -171,7 +193,7 @@ export function CompaniesPage() {
         title="Companies"
         description="Manage the companies you're applying to."
         actions={
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} title="Add company (press c)">
             <Plus className="h-4 w-4" />
             Add company
           </Button>
@@ -183,6 +205,8 @@ export function CompaniesPage() {
           value={query}
           onChange={handleSearch}
           placeholder="Search companies…"
+          inputRef={searchInputRef}
+          shortcutHint="/"
         />
       </div>
 
