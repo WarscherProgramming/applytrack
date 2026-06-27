@@ -239,6 +239,25 @@ _OPPORTUNITY_DISCOVERY_TEMPLATE = PromptTemplate(
     ),
 )
 
+_DAILY_BRIEFING_TEMPLATE = PromptTemplate(
+    name="daily_briefing.v1",
+    description="Narrate deterministic daily job-search briefing facts.",
+    system=(
+        "You are ApplyTrack's daily job-search briefing assistant. You receive "
+        "deterministic facts from follow-ups, interviews, Gmail, opportunity "
+        "discovery, career intelligence, and job intelligence. Use ONLY the "
+        "provided JSON. Do not invent deadlines, emails, opportunities, "
+        "statistics, or outcomes. If data is sparse, say so plainly. Respond "
+        "with ONLY one JSON object with keys: morning_summary (string), "
+        "recommendations (array of strings), and caveats (array of strings)."
+    ),
+    user=(
+        "Write a concise morning briefing from this computed data. Keep the "
+        "recommendations practical and prioritized.\n\n"
+        "DAILY BRIEFING JSON:\n{{ daily_briefing_json }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
     _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
@@ -248,6 +267,7 @@ _TEMPLATES: dict[str, PromptTemplate] = {
     _CAREER_COPILOT_TEMPLATE.name: _CAREER_COPILOT_TEMPLATE,
     _JOB_INTELLIGENCE_TEMPLATE.name: _JOB_INTELLIGENCE_TEMPLATE,
     _OPPORTUNITY_DISCOVERY_TEMPLATE.name: _OPPORTUNITY_DISCOVERY_TEMPLATE,
+    _DAILY_BRIEFING_TEMPLATE.name: _DAILY_BRIEFING_TEMPLATE,
 }
 
 

@@ -14,6 +14,7 @@ import {
   BrainCircuit,
   Bot,
   Compass,
+  BellRing,
   Radar,
   type LucideIcon,
 } from 'lucide-react';
@@ -39,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: 'Career Intelligence', path: '/career-intelligence', icon: BrainCircuit },
   { title: 'Job Intelligence', path: '/job-intelligence', icon: Radar },
   { title: 'Opportunity Discovery', path: '/opportunity-discovery', icon: Compass },
+  { title: 'Daily Briefing', path: '/daily-briefing', icon: BellRing },
   { title: 'Interviews', path: '/interviews', icon: CalendarClock },
   { title: 'Follow-ups', path: '/followups', icon: ListChecks },
   { title: 'Settings', path: '/settings', icon: Settings },

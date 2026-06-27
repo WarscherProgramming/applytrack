@@ -22,17 +22,16 @@ quality at each step: strict layering, tests, and migrations.
 
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
-- Database schema: Alembic revisions `0001` → `0010`
-- Backend tests: **433 passing** (last full run), no external network calls
-- Latest **committed** milestone: **M24 — AI Job Intelligence Engine** (`ac9ac48`)
-- Current `HEAD` includes Job Intelligence: the `job_intelligence` read-model
-  feature, Job Intelligence frontend page, deterministic skill-market analytics,
-  and AI interpretation over computed facts. It does not add tables or
+- Database schema: Alembic revisions `0001` → `0011`
+- Backend tests: **436 passing** (last full run), no external network calls
+- Latest **committed** milestone: **M25 — Opportunity Discovery Engine** (`c0ca5bd`)
+- Current `HEAD` includes Opportunity Discovery: public provider adapters,
+  normalized postings, deterministic scoring, AI score explanations, and
+  one-click save into Companies + Applications. It does not add tables or
   migrations.
-- **M25 — Opportunity Discovery Engine is implemented in the working tree but
-  not yet committed.** It adds the `opportunity_discovery` provider/scoring
-  feature and Opportunity Discovery frontend page. It does not add tables or
-  migrations.
+- **M26 — Daily Briefing & Notifications is implemented in the working tree but
+  not yet committed.** It adds the `daily_briefing` feature, `notifications`
+  table/migration, Daily Briefing frontend page, and notification center panel.
 
 ### Milestone history (from git)
 
@@ -54,7 +53,8 @@ quality at each step: strict layering, tests, and migrations.
 | **M22** | **Career Intelligence Dashboard** | **committed** |
 | **M23** | **AI Career Copilot** | **committed** |
 | **M24** | **AI Job Intelligence Engine** | **committed** |
-| **M25** | **Opportunity Discovery Engine** | **in working tree (uncommitted)** |
+| **M25** | **Opportunity Discovery Engine** | **committed** |
+| **M26** | **Daily Briefing & Notifications** | **in working tree (uncommitted)** |
 
 ## 3. Completed features
 
@@ -103,14 +103,18 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   Greenhouse, Lever, Ashby, and RSS; normalized job postings; deterministic
   scoring against resumes, preferences, and response history; AI explanations
   over scores; and one-click save into Companies + Applications.
+- **Daily Briefing & Notifications** (M26) — proactive morning briefing,
+  prioritized action list, follow-up/interview/Gmail/opportunity/AI insight
+  notifications with unread/read, pinned/unpinned, dismissed, priority, and
+  category state.
 - **AI usage tracking** — every AI call is recorded in `ai_usage_records`
   (provider, model, tokens, estimated cost, latency, feature).
 
 ## 4. Current roadmap
 
 Short term (recommended order):
-1. **Review and commit M25** (Opportunity Discovery Engine).
-2. **M26 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
+1. **Review and commit M26** (Daily Briefing & Notifications).
+2. **M27 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
    §5). The app is
    currently single-user with no auth; the Settings page explicitly says
    "Authentication arrives in a later milestone."
@@ -119,7 +123,7 @@ Short term (recommended order):
 
 Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 - Google Calendar integration (`integrations/google_calendar` stub exists).
-- Notifications, attachments, richer analytics (feature stubs exist).
+- Attachments and richer analytics (feature stubs exist).
 - Chrome extension for one-click application capture.
 
 ## 5. Known technical debt
@@ -144,7 +148,9 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
   implemented): `backend/app/features/{analytics, attachments, auth, emails,
   follow_ups, notifications, users}`, `backend/app/integrations/{gmail,
   google_calendar}`, `backend/app/ai/{agents, prompts, tools}`. Either implement
-  or remove.
+  or remove. Note that real notification records now live under
+  `features/daily_briefing`, so the old `features/notifications` stub remains
+  stale.
 - **Name collision:** `features/follow_ups` (empty stub) vs `features/followups`
   (the real feature). Delete the stub to avoid confusion.
 - **`integrations/gmail` stub is unused** — the real Gmail code lives in
@@ -182,7 +188,7 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 
 ## 7. Next recommended milestone
 
-**M26 — Authentication & Multi-User Foundation.**
+**M27 — Authentication & Multi-User Foundation.**
 
 Rationale: every other feature is built and stable, but the entire data model is
 unscoped to a user and the Settings UI already advertises forthcoming auth. This
@@ -196,5 +202,5 @@ Suggested shape (consistent with existing patterns):
 - Frontend: login/register, auth context, token handling in `api-client.ts`,
   route guards; flesh out the Settings → Account card.
 
-Before starting M26, consider tackling the §5 cleanup items (delete stub dirs,
+Before starting M27, consider tackling the §5 cleanup items (delete stub dirs,
 complete `.env.example`, and stop tracking generated TypeScript build info).

@@ -64,6 +64,11 @@ const OpportunityDiscoveryPage = lazy(() =>
     default: m.OpportunityDiscoveryPage,
   })),
 );
+const DailyBriefingPage = lazy(() =>
+  import('@/pages/daily-briefing-page').then((m) => ({
+    default: m.DailyBriefingPage,
+  })),
+);
 const InterviewsPage = lazy(() =>
   import('@/pages/interviews-page').then((m) => ({ default: m.InterviewsPage })),
 );
@@ -99,6 +104,7 @@ export const router = createBrowserRouter([
       { path: 'career-intelligence', element: <CareerIntelligencePage /> },
       { path: 'job-intelligence', element: <JobIntelligencePage /> },
       { path: 'opportunity-discovery', element: <OpportunityDiscoveryPage /> },
+      { path: 'daily-briefing', element: <DailyBriefingPage /> },
       { path: 'interviews', element: <InterviewsPage /> },
       { path: 'followups', element: <FollowupsPage /> },
       { path: 'settings', element: <SettingsPage /> },
