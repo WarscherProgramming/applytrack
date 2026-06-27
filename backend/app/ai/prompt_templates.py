@@ -109,10 +109,59 @@ _COVER_LETTER_TEMPLATE = PromptTemplate(
     ),
 )
 
+# Interview Preparation (Milestone 21). Produces a full prep package as one
+# structured JSON object. The system prompt forbids fabricating experience and
+# forbids inventing company news (the platform has no web access), instructing a
+# clear stored-data-only disclaimer instead.
+_INTERVIEW_PREP_TEMPLATE = PromptTemplate(
+    name="interview_prep.v1",
+    description="Generate a complete interview-preparation package.",
+    system=(
+        "You are an expert interview coach. You prepare candidates for specific "
+        "interviews using only the information provided. Strict rules: NEVER "
+        "fabricate the candidate's experience — STAR examples must be grounded in "
+        "their resume; if the resume is missing or thin, return STAR examples as "
+        "clearly-labelled reusable templates instead of invented stories. You "
+        "have NO access to the internet: do not invent recent company news — if "
+        "you lack verified recent news, set recent_news to a short note that the "
+        "overview is based only on provided/stored data. Respond with ONLY a "
+        "single JSON object matching the requested schema exactly — no markdown, "
+        "no code fences, no commentary. Every list field is an array of strings "
+        "unless stated otherwise."
+    ),
+    user=(
+        "Prepare the candidate for this interview. Return a JSON object with "
+        "exactly these keys:\n"
+        "- company_overview: object { mission: string, products_services: "
+        "string[], industry: string, culture: string, recent_news: string }\n"
+        "- likely_questions: object { behavioral: string[], technical: string[], "
+        "role_specific: string[], company_specific: string[] }\n"
+        "- star_examples: array of objects { question, situation, task, action, "
+        "result } (all strings)\n"
+        "- study_topics: object { languages: string[], frameworks: string[], "
+        "concepts: string[], system_design: string[], algorithms: string[], "
+        "role_specific: string[] }\n"
+        "- questions_to_ask: string[]\n"
+        "- red_flags: object { missing_resume_coverage: string[], skill_gaps: "
+        "string[], likely_challenges: string[] }\n"
+        "- checklist: string[] (research, portfolio, resume review, questions, "
+        "logistics)\n\n"
+        "COMPANY: {{ company_name }}\n"
+        "JOB TITLE: {{ job_title }}\n"
+        "INTERVIEW TYPE: {{ interview_type }}\n"
+        "INTERVIEW ROUND: {{ interview_round }}\n\n"
+        "JOB DESCRIPTION:\n{{ job_description }}\n\n"
+        "CANDIDATE RESUME:\n{{ resume_text }}\n\n"
+        "ADDITIONAL CONTEXT (recruiter/interview notes, recent emails; may be "
+        "'None'):\n{{ additional_context }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
     _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
     _COVER_LETTER_TEMPLATE.name: _COVER_LETTER_TEMPLATE,
+    _INTERVIEW_PREP_TEMPLATE.name: _INTERVIEW_PREP_TEMPLATE,
 }
 
 
