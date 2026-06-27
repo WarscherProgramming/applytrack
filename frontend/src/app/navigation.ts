@@ -13,6 +13,7 @@ import {
   Briefcase,
   BrainCircuit,
   Bot,
+  Radar,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -35,6 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: 'AI Cover Letter', path: '/cover-letter-ai', icon: PenLine },
   { title: 'AI Interview Prep', path: '/interview-prep', icon: GraduationCap },
   { title: 'Career Intelligence', path: '/career-intelligence', icon: BrainCircuit },
+  { title: 'Job Intelligence', path: '/job-intelligence', icon: Radar },
   { title: 'Interviews', path: '/interviews', icon: CalendarClock },
   { title: 'Follow-ups', path: '/followups', icon: ListChecks },
   { title: 'Settings', path: '/settings', icon: Settings },

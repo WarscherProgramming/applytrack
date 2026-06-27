@@ -198,6 +198,28 @@ _CAREER_COPILOT_TEMPLATE = PromptTemplate(
     ),
 )
 
+_JOB_INTELLIGENCE_TEMPLATE = PromptTemplate(
+    name="job_intelligence.v1",
+    description="Interpret deterministic job-market skill intelligence.",
+    system=(
+        "You are a job-market intelligence analyst for a job seeker. You receive "
+        "deterministic analytics extracted from saved job descriptions and resume "
+        "data. Use ONLY the supplied JSON. Do not invent statistics, market "
+        "trends, companies, skills, or resume facts. If sample size is small or "
+        "a field is empty, state that clearly. Respond with ONLY one JSON object "
+        "with keys: executive_summary (string), top_learning_priorities (array "
+        "of strings), emerging_technologies (array of strings), "
+        "resume_recommendations (array of strings), skill_investment_suggestions "
+        "(array of strings), career_direction_suggestions (array of strings), "
+        "and caveats (array of strings)."
+    ),
+    user=(
+        "Interpret this ApplyTrack Job Intelligence payload. Keep recommendations "
+        "specific, concise, and grounded in the computed evidence.\n\n"
+        "JOB INTELLIGENCE JSON:\n{{ job_intelligence_json }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
     _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
@@ -205,6 +227,7 @@ _TEMPLATES: dict[str, PromptTemplate] = {
     _INTERVIEW_PREP_TEMPLATE.name: _INTERVIEW_PREP_TEMPLATE,
     _CAREER_INTELLIGENCE_TEMPLATE.name: _CAREER_INTELLIGENCE_TEMPLATE,
     _CAREER_COPILOT_TEMPLATE.name: _CAREER_COPILOT_TEMPLATE,
+    _JOB_INTELLIGENCE_TEMPLATE.name: _JOB_INTELLIGENCE_TEMPLATE,
 }
 
 

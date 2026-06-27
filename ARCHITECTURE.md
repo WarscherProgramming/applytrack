@@ -70,7 +70,7 @@ skip:
 
 `companies`, `applications`, `recruiters`, `interviews`, `followups`, `gmail`,
 `resumes`, `cover_letters`, `resume_match`, `cover_letter_ai`, `interview_ai`,
-`career_intelligence`, `career_copilot`.
+`career_intelligence`, `career_copilot`, `job_intelligence`.
 
 > **Scaffold stubs (not implemented):** `features/{analytics, attachments, auth,
 > emails, follow_ups, notifications, users}`, `integrations/{gmail,
@@ -146,9 +146,10 @@ Current tables: `companies`, `job_applications`, `recruiters`, `interviews`,
 `followups`, `gmail_accounts`, `email_messages`, `resumes`, `cover_letters`,
 `ai_usage_records`, `resume_match_analyses`, `interview_prep_packages`.
 
-`career_intelligence` and `career_copilot` are read-model features and
-deliberately have no tables: they derive analytics and daily briefing context
-from existing CRM, Gmail, document, interview, follow-up, and AI-history records.
+`career_intelligence`, `career_copilot`, and `job_intelligence` are read-model
+features and deliberately have no tables: they derive analytics and daily
+briefing context from existing CRM, Gmail, document, interview, follow-up, and
+AI-history records.
 
 ---
 
@@ -209,6 +210,10 @@ service: gather inputs (resume text, application/company context, …)
   Gmail, interviews, follow-ups, and the application pipeline into a daily
   briefing. AI only narrates computed facts; deterministic priorities are always
   returned.
+- **job_intelligence** has **no table** — it extracts and normalizes structured
+  technology signals from saved Resume Match and Interview Prep job
+  descriptions, compares them against resume skills and Resume Match history,
+  and lets AI interpret those deterministic analytics.
 - AI clients are **injectable** (`ai_client=...`) so tests pass a deterministic
   mock; the API path is exercised by overriding the router's `_get_service`
   dependency.
@@ -256,6 +261,33 @@ feature-local typed API/hook, refresh/export actions, client-side pin/complete
 state for recommendations, priority cards, timeline, Gmail activity, upcoming
 interviews, quick actions, and empty/loading/error states. The previous overview
 dashboard remains available at `/dashboard`.
+
+---
+
+## Job Intelligence architecture (`backend/app/features/job_intelligence/`)
+
+Job Intelligence is a reusable read-only analytics engine for saved job
+descriptions:
+
+- **Extraction** identifies known programming languages, frameworks, cloud
+  platforms, databases, DevOps tools, concepts, and soft skills from every saved
+  job description.
+- **Normalization** maps aliases such as `k8s`, `postgres`, and `google cloud`
+  to canonical skill names so downstream analytics use one vocabulary.
+- **Analytics** computes frequency, percentage, trend over time, and industry /
+  company / role distributions for each signal. It also extracts resume skills
+  through the existing Resume Library + Resume Match text extraction path and
+  calculates deterministic missing-skill gaps, including Resume Match gap
+  counts when available.
+- **AI interpretation** is a final step over computed JSON facts using the
+  existing AI platform and central `job_intelligence.v1` prompt. If AI fails,
+  the endpoint still returns the deterministic report plus fallback guidance.
+- **`router.py`** exposes `GET /api/v1/job-intelligence/` with date, industry,
+  company, and role filters.
+
+The frontend page (`/job-intelligence`) uses a feature-local typed API/hook,
+Recharts visualizations, a CSS heatmap, JSON export, refresh, filters, and
+loading/error/empty states.
 
 ---
 
@@ -340,7 +372,7 @@ cover_letter_ai (templates) and interview_ai.
   deterministic; the API path is tested by overriding the router's
   `_get_service`. `OpenAIProvider` is tested with an `httpx.MockTransport`.
   **No test makes a real external API call** (AI or Gmail).
-- **Current status:** 425 passing.
+- **Current status:** 429 passing.
 - **Frontend:** no unit/E2E tests yet; quality gates are `npm run build`
   (includes `tsc -b`), `npm run lint`, `npm run typecheck`.
 
