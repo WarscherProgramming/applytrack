@@ -11,6 +11,7 @@ import {
   Sparkles,
   UserSquare2,
   Briefcase,
+  BrainCircuit,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: 'Resume Match', path: '/resume-match', icon: Sparkles },
   { title: 'AI Cover Letter', path: '/cover-letter-ai', icon: PenLine },
   { title: 'AI Interview Prep', path: '/interview-prep', icon: GraduationCap },
+  { title: 'Career Intelligence', path: '/career-intelligence', icon: BrainCircuit },
   { title: 'Interviews', path: '/interviews', icon: CalendarClock },
   { title: 'Follow-ups', path: '/followups', icon: ListChecks },
   { title: 'Settings', path: '/settings', icon: Settings },

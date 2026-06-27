@@ -157,11 +157,32 @@ _INTERVIEW_PREP_TEMPLATE = PromptTemplate(
     ),
 )
 
+_CAREER_INTELLIGENCE_TEMPLATE = PromptTemplate(
+    name="career_intelligence.v1",
+    description="Interpret computed career analytics into concise recommendations.",
+    system=(
+        "You are a career intelligence analyst. You receive computed analytics "
+        "from a job-search CRM and turn them into concise, actionable "
+        "recommendations. Strict rules: use ONLY the supplied analytics JSON; "
+        "do not invent statistics, companies, industries, skills, or trends; if "
+        "a metric is null or has a tiny denominator, state the limitation. "
+        "Respond with ONLY a single JSON object with keys: executive_summary "
+        "(string), recommendations (array of objects with title, detail, "
+        "evidence strings), and caveats (array of strings)."
+    ),
+    user=(
+        "Interpret this ApplyTrack career analytics payload and produce up to "
+        "six recommendations. Be direct and evidence-based.\n\n"
+        "ANALYTICS JSON:\n{{ analytics_json }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
     _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
     _COVER_LETTER_TEMPLATE.name: _COVER_LETTER_TEMPLATE,
     _INTERVIEW_PREP_TEMPLATE.name: _INTERVIEW_PREP_TEMPLATE,
+    _CAREER_INTELLIGENCE_TEMPLATE.name: _CAREER_INTELLIGENCE_TEMPLATE,
 }
 
 

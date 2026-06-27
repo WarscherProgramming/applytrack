@@ -23,10 +23,14 @@ quality at each step: strict layering, tests, and migrations.
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
 - Database schema: Alembic revisions `0001` → `0010`
-- Backend tests: **419 passing** (last full run), no external network calls
+- Backend tests: **422 passing** (last full run), no external network calls
 - Latest **committed** milestone: **M21 — AI Interview Preparation** (`84819c0`)
 - Current `HEAD` includes AI Interview Preparation, including migration `0010`,
   the `interview_ai` backend feature, and the frontend Interview Prep workflow.
+- **M22 — Career Intelligence Dashboard is implemented in the working tree but
+  not yet committed.** It adds the `career_intelligence` read-model feature, a
+  Career Intelligence frontend page, and AI recommendations over computed
+  analytics. It does not add tables or migrations.
 
 ### Milestone history (from git)
 
@@ -45,6 +49,7 @@ quality at each step: strict layering, tests, and migrations.
 | M19B | AI Resume Match | committed |
 | M20 | AI Cover Letter Generator | committed |
 | **M21** | **AI Interview Preparation** | **committed** |
+| **M22** | **Career Intelligence Dashboard** | **in working tree (uncommitted)** |
 
 ## 3. Completed features
 
@@ -78,18 +83,23 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
 - **AI Interview Prep** (M21) — full prep package (company overview, likely
   questions, STAR coaching, study topics, questions to ask, red flags,
   checklist); auto-saved history, reopen, compare, copy/export-PDF.
+- **Career Intelligence** (M22) — search-wide analytics across applications,
+  companies, Gmail, documents, interviews, and AI history; deterministic metrics
+  work without AI, while AI recommendations interpret computed facts only.
 - **AI usage tracking** — every AI call is recorded in `ai_usage_records`
   (provider, model, tokens, estimated cost, latency, feature).
 
 ## 4. Current roadmap
 
 Short term (recommended order):
-1. **M22 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
+1. **Review and commit M22** (Career Intelligence Dashboard).
+2. **M23 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
    §5). The app is
    currently single-user with no auth; the Settings page explicitly says
    "Authentication arrives in a later milestone."
-2. **Analytics AI / insights dashboard** — leverage stored data +
-   `ai_usage_records` for spend and pipeline insights.
+3. **Deeper analytics / insights** — expand Career Intelligence with richer
+   attribution, user-defined segments, and spend/pipeline insights from
+   `ai_usage_records`.
 
 Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 - Google Calendar integration (`integrations/google_calendar` stub exists).
@@ -155,7 +165,7 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 
 ## 7. Next recommended milestone
 
-**M22 — Authentication & Multi-User Foundation.**
+**M23 — Authentication & Multi-User Foundation.**
 
 Rationale: every other feature is built and stable, but the entire data model is
 unscoped to a user and the Settings UI already advertises forthcoming auth. This
@@ -169,5 +179,5 @@ Suggested shape (consistent with existing patterns):
 - Frontend: login/register, auth context, token handling in `api-client.ts`,
   route guards; flesh out the Settings → Account card.
 
-Before starting M22, consider tackling the §5 cleanup items (delete stub dirs,
+Before starting M23, consider tackling the §5 cleanup items (delete stub dirs,
 complete `.env.example`, and stop tracking generated TypeScript build info).

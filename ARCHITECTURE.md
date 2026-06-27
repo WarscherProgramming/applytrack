@@ -69,7 +69,8 @@ skip:
 ### Registered features
 
 `companies`, `applications`, `recruiters`, `interviews`, `followups`, `gmail`,
-`resumes`, `cover_letters`, `resume_match`, `cover_letter_ai`, `interview_ai`.
+`resumes`, `cover_letters`, `resume_match`, `cover_letter_ai`, `interview_ai`,
+`career_intelligence`.
 
 > **Scaffold stubs (not implemented):** `features/{analytics, attachments, auth,
 > emails, follow_ups, notifications, users}`, `integrations/{gmail,
@@ -145,6 +146,10 @@ Current tables: `companies`, `job_applications`, `recruiters`, `interviews`,
 `followups`, `gmail_accounts`, `email_messages`, `resumes`, `cover_letters`,
 `ai_usage_records`, `resume_match_analyses`, `interview_prep_packages`.
 
+`career_intelligence` is a read-model feature and deliberately has no table: it
+derives analytics from existing CRM, Gmail, document, interview, and AI-history
+records.
+
 ---
 
 ## AI platform architecture (`backend/app/ai/`)
@@ -196,9 +201,34 @@ service: gather inputs (resume text, application/company context, …)
   (`resume_match_analyses`, `interview_prep_packages`).
 - **cover_letter_ai** has **no table** — generated letters are saved as versions
   in the existing Cover Letter Library (the document system provides versioning).
+- **career_intelligence** has **no table** — deterministic analytics are computed
+  first, then the AI platform interprets those computed facts into
+  recommendations. If AI is unavailable, the analytics response still succeeds
+  with a clear recommendation caveat.
 - AI clients are **injectable** (`ai_client=...`) so tests pass a deterministic
   mock; the API path is exercised by overriding the router's `_get_service`
   dependency.
+
+---
+
+## Career Intelligence architecture (`backend/app/features/career_intelligence/`)
+
+Career Intelligence is a read-only analytics feature:
+
+- **`repository.py`** gathers existing records only; it never persists anything.
+- **`service.py`** owns deterministic calculations: application conversion
+  rates, company/industry/location responsiveness, document-version performance,
+  skill extraction from stored AI job descriptions, interview topic aggregation,
+  and optional period comparisons.
+- **AI recommendations** are a final interpretation step over the computed JSON
+  facts using the existing AI platform and the central `career_intelligence.v1`
+  prompt. AI does not calculate metrics and does not block the dashboard.
+- **`router.py`** exposes `GET /api/v1/career-intelligence/` with date and
+  comparison filters.
+
+The frontend page (`/career-intelligence`) uses a feature-local typed API/hook,
+Recharts visualizations, client-side JSON export, refresh, date filtering, and
+comparison-period controls.
 
 ---
 
@@ -283,7 +313,7 @@ cover_letter_ai (templates) and interview_ai.
   deterministic; the API path is tested by overriding the router's
   `_get_service`. `OpenAIProvider` is tested with an `httpx.MockTransport`.
   **No test makes a real external API call** (AI or Gmail).
-- **Current status:** 419 passing.
+- **Current status:** 422 passing.
 - **Frontend:** no unit/E2E tests yet; quality gates are `npm run build`
   (includes `tsc -b`), `npm run lint`, `npm run typecheck`.
 

@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.exceptions.handlers import register_exception_handlers
 from app.features.applications.router import router as applications_router
+from app.features.career_intelligence.router import router as career_intelligence_router
 from app.features.companies.router import router as companies_router
 from app.features.cover_letter_ai.router import router as cover_letter_ai_router
 from app.features.cover_letters.router import router as cover_letters_router
@@ -64,6 +65,7 @@ app.include_router(cover_letters_router, prefix=settings.API_V1_PREFIX)
 app.include_router(resume_match_router, prefix=settings.API_V1_PREFIX)
 app.include_router(cover_letter_ai_router, prefix=settings.API_V1_PREFIX)
 app.include_router(interview_ai_router, prefix=settings.API_V1_PREFIX)
+app.include_router(career_intelligence_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["infrastructure"])
