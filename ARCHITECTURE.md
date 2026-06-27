@@ -70,7 +70,8 @@ skip:
 
 `companies`, `applications`, `recruiters`, `interviews`, `followups`, `gmail`,
 `resumes`, `cover_letters`, `resume_match`, `cover_letter_ai`, `interview_ai`,
-`career_intelligence`, `career_copilot`, `job_intelligence`.
+`career_intelligence`, `career_copilot`, `job_intelligence`,
+`opportunity_discovery`.
 
 > **Scaffold stubs (not implemented):** `features/{analytics, attachments, auth,
 > emails, follow_ups, notifications, users}`, `integrations/{gmail,
@@ -146,10 +147,12 @@ Current tables: `companies`, `job_applications`, `recruiters`, `interviews`,
 `followups`, `gmail_accounts`, `email_messages`, `resumes`, `cover_letters`,
 `ai_usage_records`, `resume_match_analyses`, `interview_prep_packages`.
 
-`career_intelligence`, `career_copilot`, and `job_intelligence` are read-model
-features and deliberately have no tables: they derive analytics and daily
-briefing context from existing CRM, Gmail, document, interview, follow-up, and
-AI-history records.
+`career_intelligence`, `career_copilot`, `job_intelligence`, and
+`opportunity_discovery` are table-free derived features. They compute analytics,
+briefing context, job-market signals, and external opportunity scores from
+existing CRM, Gmail, document, interview, follow-up, AI-history, and public
+provider data. Opportunity Discovery only persists when the user explicitly
+saves a posting into Companies + Applications.
 
 ---
 
@@ -214,6 +217,10 @@ service: gather inputs (resume text, application/company context, …)
   technology signals from saved Resume Match and Interview Prep job
   descriptions, compares them against resume skills and Resume Match history,
   and lets AI interpret those deterministic analytics.
+- **opportunity_discovery** has **no table** — it fetches public board/feed
+  postings through provider adapters, normalizes them, scores them
+  deterministically, and uses AI only to explain the computed score. Saving an
+  opportunity writes through the existing Companies and Applications features.
 - AI clients are **injectable** (`ai_client=...`) so tests pass a deterministic
   mock; the API path is exercised by overriding the router's `_get_service`
   dependency.
@@ -288,6 +295,39 @@ descriptions:
 The frontend page (`/job-intelligence`) uses a feature-local typed API/hook,
 Recharts visualizations, a CSS heatmap, JSON export, refresh, filters, and
 loading/error/empty states.
+
+---
+
+## Opportunity Discovery architecture (`backend/app/features/opportunity_discovery/`)
+
+Opportunity Discovery turns external public job sources into scored pipeline
+candidates without automatic applications:
+
+- **Provider abstraction**: `JobProvider.fetch(ProviderFetchRequest)` returns
+  normalized `NormalizedJobPosting` objects. Greenhouse, Lever, Ashby, and RSS
+  adapters use documented public JSON/RSS endpoints only; they do not scrape
+  restricted pages.
+- **Normalization**: provider adapters standardize company, title, location,
+  salary, employment type, work mode, URL, posted date, description, and skills.
+  Skills are extracted through the Job Intelligence taxonomy so future providers
+  plug into the same vocabulary.
+- **Scoring**: `OpportunityScoringEngine` is deterministic and separate from
+  providers. It scores resume skill overlap, missing skills, preferred
+  location/job type/industry, and historical response rates from tracked
+  applications and companies. Resume and cover-letter recommendations come from
+  existing document versions.
+- **AI explanation**: the final step renders `opportunity_discovery.v1` with the
+  normalized posting and deterministic score. AI explains the score only; it
+  does not fetch jobs, calculate metrics, or fabricate values. If AI fails, the
+  API returns fallback deterministic rationale.
+- **Save flow**: `POST /api/v1/opportunity-discovery/save` creates/reuses the
+  company and creates a draft application with the posting URL, source, salary,
+  location, and recommended document links. It does not submit applications.
+
+The frontend page (`/opportunity-discovery`) exposes source inputs, provider /
+remote / location / salary / technology filters, scored job cards, comparison,
+quick resume-match details, one-click add to Applications, and Recharts
+summaries for technologies, industries, and locations.
 
 ---
 
@@ -372,7 +412,7 @@ cover_letter_ai (templates) and interview_ai.
   deterministic; the API path is tested by overriding the router's
   `_get_service`. `OpenAIProvider` is tested with an `httpx.MockTransport`.
   **No test makes a real external API call** (AI or Gmail).
-- **Current status:** 429 passing.
+- **Current status:** 433 passing.
 - **Frontend:** no unit/E2E tests yet; quality gates are `npm run build`
   (includes `tsc -b`), `npm run lint`, `npm run typecheck`.
 

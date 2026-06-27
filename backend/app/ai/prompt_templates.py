@@ -220,6 +220,25 @@ _JOB_INTELLIGENCE_TEMPLATE = PromptTemplate(
     ),
 )
 
+_OPPORTUNITY_DISCOVERY_TEMPLATE = PromptTemplate(
+    name="opportunity_discovery.v1",
+    description="Explain deterministic opportunity discovery scores.",
+    system=(
+        "You are ApplyTrack's opportunity discovery analyst. You receive one "
+        "normalized job posting and a deterministic score computed from resume "
+        "skills, missing skills, preferences, and historical ApplyTrack data. "
+        "Use ONLY the supplied JSON. Do not invent salary, company facts, "
+        "statistics, or application outcomes. If data is sparse, say so plainly. "
+        "Respond with ONLY one JSON object with keys: summary (string), "
+        "score_explanation (string), next_steps (array of strings), and "
+        "cautions (array of strings)."
+    ),
+    user=(
+        "Explain this opportunity score concisely and actionably.\n\n"
+        "OPPORTUNITY SCORE JSON:\n{{ opportunity_score_json }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
     _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
@@ -228,6 +247,7 @@ _TEMPLATES: dict[str, PromptTemplate] = {
     _CAREER_INTELLIGENCE_TEMPLATE.name: _CAREER_INTELLIGENCE_TEMPLATE,
     _CAREER_COPILOT_TEMPLATE.name: _CAREER_COPILOT_TEMPLATE,
     _JOB_INTELLIGENCE_TEMPLATE.name: _JOB_INTELLIGENCE_TEMPLATE,
+    _OPPORTUNITY_DISCOVERY_TEMPLATE.name: _OPPORTUNITY_DISCOVERY_TEMPLATE,
 }
 
 

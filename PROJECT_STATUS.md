@@ -23,14 +23,16 @@ quality at each step: strict layering, tests, and migrations.
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
 - Database schema: Alembic revisions `0001` → `0010`
-- Backend tests: **429 passing** (last full run), no external network calls
-- Latest **committed** milestone: **M23 — AI Career Copilot** (`ecc4691`)
-- Current `HEAD` includes AI Career Copilot: the `career_copilot` read-model
-  feature, default Career Copilot landing page, deterministic priorities, and AI
-  narrative over computed briefing facts. It does not add tables or migrations.
-- **M24 — AI Job Intelligence Engine is implemented in the working tree but not
-  yet committed.** It adds the `job_intelligence` read-model feature and Job
-  Intelligence frontend page. It does not add tables or migrations.
+- Backend tests: **433 passing** (last full run), no external network calls
+- Latest **committed** milestone: **M24 — AI Job Intelligence Engine** (`ac9ac48`)
+- Current `HEAD` includes Job Intelligence: the `job_intelligence` read-model
+  feature, Job Intelligence frontend page, deterministic skill-market analytics,
+  and AI interpretation over computed facts. It does not add tables or
+  migrations.
+- **M25 — Opportunity Discovery Engine is implemented in the working tree but
+  not yet committed.** It adds the `opportunity_discovery` provider/scoring
+  feature and Opportunity Discovery frontend page. It does not add tables or
+  migrations.
 
 ### Milestone history (from git)
 
@@ -51,7 +53,8 @@ quality at each step: strict layering, tests, and migrations.
 | **M21** | **AI Interview Preparation** | **committed** |
 | **M22** | **Career Intelligence Dashboard** | **committed** |
 | **M23** | **AI Career Copilot** | **committed** |
-| **M24** | **AI Job Intelligence Engine** | **in working tree (uncommitted)** |
+| **M24** | **AI Job Intelligence Engine** | **committed** |
+| **M25** | **Opportunity Discovery Engine** | **in working tree (uncommitted)** |
 
 ## 3. Completed features
 
@@ -96,14 +99,18 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   trend analysis, market distributions, deterministic resume-skill gaps, and AI
   interpretation over saved job descriptions from Resume Match and Interview
   Prep. It exposes reusable analytics for future recommendations.
+- **Opportunity Discovery Engine** (M25) — public provider adapters for
+  Greenhouse, Lever, Ashby, and RSS; normalized job postings; deterministic
+  scoring against resumes, preferences, and response history; AI explanations
+  over scores; and one-click save into Companies + Applications.
 - **AI usage tracking** — every AI call is recorded in `ai_usage_records`
   (provider, model, tokens, estimated cost, latency, feature).
 
 ## 4. Current roadmap
 
 Short term (recommended order):
-1. **Review and commit M24** (AI Job Intelligence Engine).
-2. **M25 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
+1. **Review and commit M25** (Opportunity Discovery Engine).
+2. **M26 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
    §5). The app is
    currently single-user with no auth; the Settings page explicitly says
    "Authentication arrives in a later milestone."
@@ -125,7 +132,8 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
   tested with a mocked HTTP transport but has never run against the live OpenAI
   API; the cost table in `ai/usage_tracker.py` is a static estimate. Gmail's
   real OAuth path exists but the default is simulation — real Google credentials
-  are untested.
+  are untested. Opportunity Discovery provider adapters are covered with mocked
+  payloads but have not been validated against live boards/feed URLs.
 - **AI "streaming" is simulated.** Generation is a single synchronous request;
   the UI shows an animated progress indicator, not true token streaming.
 - **Storage is local-disk only.** The `FileStorage` abstraction is designed for
@@ -174,7 +182,7 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 
 ## 7. Next recommended milestone
 
-**M25 — Authentication & Multi-User Foundation.**
+**M26 — Authentication & Multi-User Foundation.**
 
 Rationale: every other feature is built and stable, but the entire data model is
 unscoped to a user and the Settings UI already advertises forthcoming auth. This
@@ -188,5 +196,5 @@ Suggested shape (consistent with existing patterns):
 - Frontend: login/register, auth context, token handling in `api-client.ts`,
   route guards; flesh out the Settings → Account card.
 
-Before starting M25, consider tackling the §5 cleanup items (delete stub dirs,
+Before starting M26, consider tackling the §5 cleanup items (delete stub dirs,
 complete `.env.example`, and stop tracking generated TypeScript build info).

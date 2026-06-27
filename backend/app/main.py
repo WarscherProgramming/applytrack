@@ -19,6 +19,7 @@ from app.features.gmail.router import router as gmail_router
 from app.features.interview_ai.router import router as interview_ai_router
 from app.features.interviews.router import router as interviews_router
 from app.features.job_intelligence.router import router as job_intelligence_router
+from app.features.opportunity_discovery.router import router as opportunity_discovery_router
 from app.features.recruiters.router import router as recruiters_router
 from app.features.resume_match.router import router as resume_match_router
 from app.features.resumes.router import router as resumes_router
@@ -70,6 +71,7 @@ app.include_router(interview_ai_router, prefix=settings.API_V1_PREFIX)
 app.include_router(career_intelligence_router, prefix=settings.API_V1_PREFIX)
 app.include_router(career_copilot_router, prefix=settings.API_V1_PREFIX)
 app.include_router(job_intelligence_router, prefix=settings.API_V1_PREFIX)
+app.include_router(opportunity_discovery_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["infrastructure"])
