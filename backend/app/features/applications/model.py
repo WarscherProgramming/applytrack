@@ -47,3 +47,20 @@ class JobApplication(BaseModel):
     date_applied: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     source: Mapped[str | None] = mapped_column(String(255), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Optional references to the exact resume / cover-letter version submitted
+    # with this application. SET NULL keeps the application intact if the
+    # referenced document is later deleted — losing the link must never delete
+    # the application record.
+    resume_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("resumes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    cover_letter_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cover_letters.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )

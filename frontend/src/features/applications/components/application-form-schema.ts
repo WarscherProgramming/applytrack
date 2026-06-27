@@ -15,6 +15,14 @@ const optionalText = (max: number) =>
     .optional()
     .transform((v) => (v === '' ? undefined : v));
 
+// A select whose "none" sentinel (and empty string) become null — an explicit
+// "clear this reference" on submit. Otherwise the chosen id passes through.
+const NONE = 'none';
+const optionalRef = z
+  .string()
+  .optional()
+  .transform((v) => (!v || v === NONE ? null : v));
+
 export const applicationFormSchema = z.object({
   company_id: z.string().min(1, 'Company is required'),
   job_title: z
@@ -33,7 +41,11 @@ export const applicationFormSchema = z.object({
     .transform((v) => (v === '' ? undefined : v)),
   source: optionalText(255),
   notes: optionalText(5000),
+  resume_id: optionalRef,
+  cover_letter_id: optionalRef,
 });
+
+export const NONE_DOCUMENT = NONE;
 
 export type ApplicationFormValues = z.input<typeof applicationFormSchema>;
 export type ApplicationFormOutput = z.output<typeof applicationFormSchema>;

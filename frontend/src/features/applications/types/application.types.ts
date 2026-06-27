@@ -23,6 +23,8 @@ export interface Application extends BaseEntity {
   date_applied: string | null;
   source: string | null;
   notes: string | null;
+  resume_id: string | null;
+  cover_letter_id: string | null;
 }
 
 export interface ApplicationListParams extends PaginationParams {
@@ -41,6 +43,8 @@ export interface ApplicationCreateInput {
   date_applied?: string | null;
   source?: string | null;
   notes?: string | null;
+  resume_id?: string | null;
+  cover_letter_id?: string | null;
 }
 
 /** Partial update — only provided fields are written (PATCH semantics). */

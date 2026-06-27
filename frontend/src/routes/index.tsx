@@ -21,6 +21,14 @@ const ApplicationsPage = lazy(() =>
 const RecruitersPage = lazy(() =>
   import('@/pages/recruiters-page').then((m) => ({ default: m.RecruitersPage })),
 );
+const ResumesPage = lazy(() =>
+  import('@/pages/resumes-page').then((m) => ({ default: m.ResumesPage })),
+);
+const CoverLettersPage = lazy(() =>
+  import('@/pages/cover-letters-page').then((m) => ({
+    default: m.CoverLettersPage,
+  })),
+);
 const InterviewsPage = lazy(() =>
   import('@/pages/interviews-page').then((m) => ({ default: m.InterviewsPage })),
 );
@@ -47,6 +55,8 @@ export const router = createBrowserRouter([
       { path: 'companies', element: <CompaniesPage /> },
       { path: 'applications', element: <ApplicationsPage /> },
       { path: 'recruiters', element: <RecruitersPage /> },
+      { path: 'resumes', element: <ResumesPage /> },
+      { path: 'cover-letters', element: <CoverLettersPage /> },
       { path: 'interviews', element: <InterviewsPage /> },
       { path: 'followups', element: <FollowupsPage /> },
       { path: 'settings', element: <SettingsPage /> },

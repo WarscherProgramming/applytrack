@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/gmail/callback"
     GMAIL_SIMULATION: bool = True
 
+    # File storage (resumes, cover letters).
+    # STORAGE_BACKEND selects the implementation behind the FileStorage
+    # abstraction (see app.shared.storage). "local" writes to STORAGE_LOCAL_PATH;
+    # future values ("azure", "s3", "gdrive") plug in without touching business
+    # logic. STORAGE_MAX_UPLOAD_BYTES caps a single upload (default 10 MB).
+    STORAGE_BACKEND: Literal["local"] = "local"
+    STORAGE_LOCAL_PATH: str = "storage"
+    STORAGE_MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024
+
     @property
     def gmail_configured(self) -> bool:
         """True when real Google OAuth credentials are present."""

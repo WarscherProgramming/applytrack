@@ -17,6 +17,9 @@ class ApplicationBase(AppBaseModel):
     date_applied: date | None = None
     source: str | None = Field(None, max_length=255)
     notes: str | None = None
+    # Optional links to the submitted resume / cover-letter versions.
+    resume_id: UUID | None = None
+    cover_letter_id: UUID | None = None
 
 
 class ApplicationCreate(ApplicationBase):
@@ -39,6 +42,8 @@ class ApplicationUpdate(AppBaseModel):
     date_applied: date | None = None
     source: str | None = Field(None, max_length=255)
     notes: str | None = None
+    resume_id: UUID | None = None
+    cover_letter_id: UUID | None = None
 
 
 class ApplicationResponse(EntitySchema):
@@ -51,6 +56,8 @@ class ApplicationResponse(EntitySchema):
     date_applied: date | None
     source: str | None
     notes: str | None
+    resume_id: UUID | None
+    cover_letter_id: UUID | None
 
 
 class ApplicationListResponse(AppBaseModel):

@@ -12,3 +12,5 @@ from app.features.recruiters.model import Recruiter  # noqa: F401
 from app.features.interviews.model import Interview  # noqa: F401
 from app.features.followups.model import FollowUp  # noqa: F401
 from app.features.gmail.models import EmailMessage, GmailAccount  # noqa: F401
+from app.features.resumes.model import Resume  # noqa: F401
+from app.features.cover_letters.model import CoverLetter  # noqa: F401

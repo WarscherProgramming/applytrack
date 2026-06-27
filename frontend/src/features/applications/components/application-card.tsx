@@ -2,6 +2,8 @@ import {
   Building2,
   CalendarDays,
   DollarSign,
+  FileSignature,
+  FileText,
   GripVertical,
   MapPin,
   MoreHorizontal,
@@ -55,8 +57,16 @@ export function ApplicationCard({
   onDragEnd,
   isDragging = false,
 }: ApplicationCardProps) {
-  const { job_title, location, salary_range, date_applied, source, notes } =
-    application;
+  const {
+    job_title,
+    location,
+    salary_range,
+    date_applied,
+    source,
+    notes,
+    resume_id,
+    cover_letter_id,
+  } = application;
 
   return (
     <div
@@ -153,6 +163,28 @@ export function ApplicationCard({
           <p className="line-clamp-2 pt-0.5 text-xs text-muted-foreground/80">
             {notes}
           </p>
+        ) : null}
+        {resume_id || cover_letter_id ? (
+          <div className="flex items-center gap-3 pt-0.5 text-xs text-muted-foreground">
+            {resume_id ? (
+              <span
+                className="flex items-center gap-1.5"
+                title="Resume submitted"
+              >
+                <FileText className="h-3 w-3 shrink-0" />
+                Resume
+              </span>
+            ) : null}
+            {cover_letter_id ? (
+              <span
+                className="flex items-center gap-1.5"
+                title="Cover letter submitted"
+              >
+                <FileSignature className="h-3 w-3 shrink-0" />
+                Cover letter
+              </span>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>

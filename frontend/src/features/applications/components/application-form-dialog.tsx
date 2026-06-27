@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCompanyOptions } from '@/features/companies/hooks/use-company-options';
+import { coverLetterHooks } from '@/features/cover-letters/cover-letters';
+import { resumeHooks } from '@/features/resumes/resumes';
 import { getErrorMessage } from '@/lib/errors';
 import { useToast } from '@/hooks/use-toast';
 import { humanizeEnum } from '@/utils/format';
@@ -36,6 +38,7 @@ import {
 import type { Application } from '../types/application.types';
 import {
   applicationFormSchema,
+  NONE_DOCUMENT,
   type ApplicationFormOutput,
   type ApplicationFormValues,
 } from './application-form-schema';
@@ -59,6 +62,8 @@ const EMPTY: ApplicationFormValues = {
   date_applied: '',
   source: '',
   notes: '',
+  resume_id: NONE_DOCUMENT,
+  cover_letter_id: NONE_DOCUMENT,
 };
 
 /** Create/edit application dialog. One component serves both modes. */
@@ -71,6 +76,8 @@ export function ApplicationFormDialog({
   const isEdit = Boolean(application);
   const { toast } = useToast();
   const { options, isLoading: companiesLoading } = useCompanyOptions();
+  const { options: resumeOptions } = resumeHooks.useDocumentOptions();
+  const { options: coverLetterOptions } = coverLetterHooks.useDocumentOptions();
   const createApplication = useCreateApplication();
   const updateApplication = useUpdateApplication();
 
@@ -100,6 +107,8 @@ export function ApplicationFormDialog({
             date_applied: application.date_applied ?? '',
             source: application.source ?? '',
             notes: application.notes ?? '',
+            resume_id: application.resume_id ?? NONE_DOCUMENT,
+            cover_letter_id: application.cover_letter_id ?? NONE_DOCUMENT,
           }
         : { ...EMPTY, status: defaultStatus ?? 'draft' },
     );
@@ -256,6 +265,59 @@ export function ApplicationFormDialog({
               <div className="space-y-2">
                 <Label htmlFor="source">Source</Label>
                 <Input id="source" placeholder="e.g. LinkedIn" {...register('source')} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="resume_id">Submitted resume</Label>
+                <Controller
+                  control={control}
+                  name="resume_id"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || NONE_DOCUMENT}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger id="resume_id">
+                        <SelectValue placeholder="No resume" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_DOCUMENT}>No resume</SelectItem>
+                        {resumeOptions.map((doc) => (
+                          <SelectItem key={doc.id} value={doc.id}>
+                            {doc.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cover_letter_id">Submitted cover letter</Label>
+                <Controller
+                  control={control}
+                  name="cover_letter_id"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || NONE_DOCUMENT}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger id="cover_letter_id">
+                        <SelectValue placeholder="No cover letter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_DOCUMENT}>No cover letter</SelectItem>
+                        {coverLetterOptions.map((doc) => (
+                          <SelectItem key={doc.id} value={doc.id}>
+                            {doc.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 

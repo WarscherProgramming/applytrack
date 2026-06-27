@@ -1,6 +1,8 @@
 import {
   Building2,
   CalendarClock,
+  FileSignature,
+  FileText,
   LayoutDashboard,
   ListChecks,
   Settings,
@@ -21,6 +23,8 @@ export const NAV_ITEMS: NavItem[] = [
   { title: 'Companies', path: '/companies', icon: Building2 },
   { title: 'Applications', path: '/applications', icon: Briefcase },
   { title: 'Recruiters', path: '/recruiters', icon: UserSquare2 },
+  { title: 'Resumes', path: '/resumes', icon: FileText },
+  { title: 'Cover Letters', path: '/cover-letters', icon: FileSignature },
   { title: 'Interviews', path: '/interviews', icon: CalendarClock },
   { title: 'Follow-ups', path: '/followups', icon: ListChecks },
   { title: 'Settings', path: '/settings', icon: Settings },

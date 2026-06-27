@@ -52,3 +52,8 @@ logs/
 # --- Database ------------------------------------------------------
 *.sqlite3
 *.db
+
+# --- Uploaded files (local storage backend) ------------------------
+# Resumes / cover letters written by LocalFileStorage in dev (./backend:/app
+# mount) land here; never commit user uploads.
+backend/storage/

@@ -26,6 +26,11 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    # Persist uploaded resumes/cover letters across container restarts. Matches
+    # STORAGE_LOCAL_PATH ("storage", relative to the /app workdir). Swapping to
+    # cloud storage later makes this volume unnecessary (see app.shared.storage).
+    volumes:
+      - backend_storage:/app/storage
 
   frontend:
     build:
@@ -41,3 +46,4 @@ services:
 
 volumes:
   postgres_data:
+  backend_storage:

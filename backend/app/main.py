@@ -10,10 +10,12 @@ from app.core.logging import configure_logging
 from app.exceptions.handlers import register_exception_handlers
 from app.features.applications.router import router as applications_router
 from app.features.companies.router import router as companies_router
+from app.features.cover_letters.router import router as cover_letters_router
 from app.features.followups.router import router as followups_router
 from app.features.gmail.router import router as gmail_router
 from app.features.interviews.router import router as interviews_router
 from app.features.recruiters.router import router as recruiters_router
+from app.features.resumes.router import router as resumes_router
 
 configure_logging()
 
@@ -54,6 +56,8 @@ app.include_router(recruiters_router, prefix=settings.API_V1_PREFIX)
 app.include_router(interviews_router, prefix=settings.API_V1_PREFIX)
 app.include_router(followups_router, prefix=settings.API_V1_PREFIX)
 app.include_router(gmail_router, prefix=settings.API_V1_PREFIX)
+app.include_router(resumes_router, prefix=settings.API_V1_PREFIX)
+app.include_router(cover_letters_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["infrastructure"])
