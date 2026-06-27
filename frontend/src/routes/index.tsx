@@ -10,6 +10,11 @@ import { AppLayout } from '@/layouts/app-layout';
 const DashboardPage = lazy(() =>
   import('@/pages/dashboard-page').then((m) => ({ default: m.DashboardPage })),
 );
+const CareerCopilotPage = lazy(() =>
+  import('@/pages/career-copilot-page').then((m) => ({
+    default: m.CareerCopilotPage,
+  })),
+);
 const CompaniesPage = lazy(() =>
   import('@/pages/companies-page').then((m) => ({ default: m.CompaniesPage })),
 );
@@ -71,7 +76,8 @@ export const router = createBrowserRouter([
     path: '/',
     element: <AppLayout />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      { index: true, element: <CareerCopilotPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
       { path: 'companies', element: <CompaniesPage /> },
       { path: 'applications', element: <ApplicationsPage /> },
       { path: 'recruiters', element: <RecruitersPage /> },

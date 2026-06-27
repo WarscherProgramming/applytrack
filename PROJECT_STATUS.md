@@ -23,14 +23,15 @@ quality at each step: strict layering, tests, and migrations.
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
 - Database schema: Alembic revisions `0001` → `0010`
-- Backend tests: **422 passing** (last full run), no external network calls
-- Latest **committed** milestone: **M21 — AI Interview Preparation** (`84819c0`)
-- Current `HEAD` includes AI Interview Preparation, including migration `0010`,
-  the `interview_ai` backend feature, and the frontend Interview Prep workflow.
-- **M22 — Career Intelligence Dashboard is implemented in the working tree but
-  not yet committed.** It adds the `career_intelligence` read-model feature, a
-  Career Intelligence frontend page, and AI recommendations over computed
-  analytics. It does not add tables or migrations.
+- Backend tests: **425 passing** (last full run), no external network calls
+- Latest **committed** milestone: **M22 — Career Intelligence Dashboard** (`5627607`)
+- Current `HEAD` includes Career Intelligence: the `career_intelligence`
+  read-model feature, Career Intelligence frontend page, and AI recommendations
+  over computed analytics. It does not add tables or migrations.
+- **M23 — AI Career Copilot is implemented in the working tree but not yet
+  committed.** It adds the `career_copilot` read-model feature and makes the
+  Career Copilot page the default landing page. It does not add tables or
+  migrations.
 
 ### Milestone history (from git)
 
@@ -49,7 +50,8 @@ quality at each step: strict layering, tests, and migrations.
 | M19B | AI Resume Match | committed |
 | M20 | AI Cover Letter Generator | committed |
 | **M21** | **AI Interview Preparation** | **committed** |
-| **M22** | **Career Intelligence Dashboard** | **in working tree (uncommitted)** |
+| **M22** | **Career Intelligence Dashboard** | **committed** |
+| **M23** | **AI Career Copilot** | **in working tree (uncommitted)** |
 
 ## 3. Completed features
 
@@ -86,20 +88,23 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
 - **Career Intelligence** (M22) — search-wide analytics across applications,
   companies, Gmail, documents, interviews, and AI history; deterministic metrics
   work without AI, while AI recommendations interpret computed facts only.
+- **AI Career Copilot** (M23) — proactive daily briefing, ranked priorities,
+  upcoming deadline timeline, skill/resume/interview/follow-up reminders, and
+  AI narrative over deterministic facts. It reuses Career Intelligence and
+  existing CRM/Gmail/interview/follow-up data.
 - **AI usage tracking** — every AI call is recorded in `ai_usage_records`
   (provider, model, tokens, estimated cost, latency, feature).
 
 ## 4. Current roadmap
 
 Short term (recommended order):
-1. **Review and commit M22** (Career Intelligence Dashboard).
-2. **M23 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
+1. **Review and commit M23** (AI Career Copilot).
+2. **M24 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
    §5). The app is
    currently single-user with no auth; the Settings page explicitly says
    "Authentication arrives in a later milestone."
-3. **Deeper analytics / insights** — expand Career Intelligence with richer
-   attribution, user-defined segments, and spend/pipeline insights from
-   `ai_usage_records`.
+3. **Copilot persistence** — persist pinned/completed recommendations and daily
+   briefing history once authentication/user scoping exists.
 
 Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 - Google Calendar integration (`integrations/google_calendar` stub exists).
@@ -165,7 +170,7 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 
 ## 7. Next recommended milestone
 
-**M23 — Authentication & Multi-User Foundation.**
+**M24 — Authentication & Multi-User Foundation.**
 
 Rationale: every other feature is built and stable, but the entire data model is
 unscoped to a user and the Settings UI already advertises forthcoming auth. This
@@ -179,5 +184,5 @@ Suggested shape (consistent with existing patterns):
 - Frontend: login/register, auth context, token handling in `api-client.ts`,
   route guards; flesh out the Settings → Account card.
 
-Before starting M23, consider tackling the §5 cleanup items (delete stub dirs,
+Before starting M24, consider tackling the §5 cleanup items (delete stub dirs,
 complete `.env.example`, and stop tracking generated TypeScript build info).

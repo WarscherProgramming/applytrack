@@ -70,7 +70,7 @@ skip:
 
 `companies`, `applications`, `recruiters`, `interviews`, `followups`, `gmail`,
 `resumes`, `cover_letters`, `resume_match`, `cover_letter_ai`, `interview_ai`,
-`career_intelligence`.
+`career_intelligence`, `career_copilot`.
 
 > **Scaffold stubs (not implemented):** `features/{analytics, attachments, auth,
 > emails, follow_ups, notifications, users}`, `integrations/{gmail,
@@ -146,9 +146,9 @@ Current tables: `companies`, `job_applications`, `recruiters`, `interviews`,
 `followups`, `gmail_accounts`, `email_messages`, `resumes`, `cover_letters`,
 `ai_usage_records`, `resume_match_analyses`, `interview_prep_packages`.
 
-`career_intelligence` is a read-model feature and deliberately has no table: it
-derives analytics from existing CRM, Gmail, document, interview, and AI-history
-records.
+`career_intelligence` and `career_copilot` are read-model features and
+deliberately have no tables: they derive analytics and daily briefing context
+from existing CRM, Gmail, document, interview, follow-up, and AI-history records.
 
 ---
 
@@ -205,6 +205,10 @@ service: gather inputs (resume text, application/company context, …)
   first, then the AI platform interprets those computed facts into
   recommendations. If AI is unavailable, the analytics response still succeeds
   with a clear recommendation caveat.
+- **career_copilot** has **no table** — it orchestrates Career Intelligence plus
+  Gmail, interviews, follow-ups, and the application pipeline into a daily
+  briefing. AI only narrates computed facts; deterministic priorities are always
+  returned.
 - AI clients are **injectable** (`ai_client=...`) so tests pass a deterministic
   mock; the API path is exercised by overriding the router's `_get_service`
   dependency.
@@ -229,6 +233,29 @@ Career Intelligence is a read-only analytics feature:
 The frontend page (`/career-intelligence`) uses a feature-local typed API/hook,
 Recharts visualizations, client-side JSON export, refresh, date filtering, and
 comparison-period controls.
+
+---
+
+## Career Copilot architecture (`backend/app/features/career_copilot/`)
+
+Career Copilot is a read-only orchestration feature:
+
+- **`repository.py`** gathers existing applications, companies, follow-ups,
+  upcoming interviews, and recent Gmail activity.
+- **`service.py`** calls `CareerIntelligenceService` for analytics, then adds
+  time-sensitive deterministic aggregation: today's metrics, ranked priorities,
+  upcoming deadlines, recent email activity, interview reminders, follow-up
+  reminders, skill focus, and resume recommendations.
+- **AI narrative** is a final step over the computed briefing JSON using the
+  existing AI platform and central `career_copilot.v1` prompt. If AI fails, the
+  endpoint still returns deterministic priorities and fallback copy.
+- **`router.py`** exposes `GET /api/v1/career-copilot/daily`.
+
+The frontend Career Copilot page is the default route (`/`). It uses a
+feature-local typed API/hook, refresh/export actions, client-side pin/complete
+state for recommendations, priority cards, timeline, Gmail activity, upcoming
+interviews, quick actions, and empty/loading/error states. The previous overview
+dashboard remains available at `/dashboard`.
 
 ---
 
@@ -313,7 +340,7 @@ cover_letter_ai (templates) and interview_ai.
   deterministic; the API path is tested by overriding the router's
   `_get_service`. `OpenAIProvider` is tested with an `httpx.MockTransport`.
   **No test makes a real external API call** (AI or Gmail).
-- **Current status:** 422 passing.
+- **Current status:** 425 passing.
 - **Frontend:** no unit/E2E tests yet; quality gates are `npm run build`
   (includes `tsc -b`), `npm run lint`, `npm run typecheck`.
 

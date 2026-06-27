@@ -177,12 +177,34 @@ _CAREER_INTELLIGENCE_TEMPLATE = PromptTemplate(
     ),
 )
 
+_CAREER_COPILOT_TEMPLATE = PromptTemplate(
+    name="career_copilot.v1",
+    description="Turn deterministic career briefing facts into a daily copilot narrative.",
+    system=(
+        "You are ApplyTrack's career copilot. You receive a deterministic daily "
+        "briefing JSON generated from the user's tracked applications, Gmail, "
+        "follow-ups, interviews, and career intelligence metrics. Use ONLY the "
+        "provided facts. Do not invent statistics, deadlines, companies, or "
+        "skills. If data is sparse, say so plainly. Respond with ONLY one JSON "
+        "object with keys: executive_summary (string), ai_recommendations "
+        "(array of strings), skill_focus (string), resume_recommendation "
+        "(string), interview_preparation_reminder (string), follow_up_reminder "
+        "(string), and caveats (array of strings)."
+    ),
+    user=(
+        "Write today's career copilot briefing from this computed data. Keep it "
+        "concise, prioritized, and actionable.\n\n"
+        "BRIEFING JSON:\n{{ briefing_json }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
     _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
     _COVER_LETTER_TEMPLATE.name: _COVER_LETTER_TEMPLATE,
     _INTERVIEW_PREP_TEMPLATE.name: _INTERVIEW_PREP_TEMPLATE,
     _CAREER_INTELLIGENCE_TEMPLATE.name: _CAREER_INTELLIGENCE_TEMPLATE,
+    _CAREER_COPILOT_TEMPLATE.name: _CAREER_COPILOT_TEMPLATE,
 }
 
 
