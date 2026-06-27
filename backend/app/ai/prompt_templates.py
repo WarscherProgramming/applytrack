@@ -41,9 +41,8 @@ class RenderedPrompt:
 # ---------------------------------------------------------------------------
 # Central registry.
 #
-# Feature-specific prompts (Resume Match, Cover Letter AI, Interview Prep) will
-# be added here in later milestones. For now it holds one example template that
-# documents the structure and gives the platform something concrete to exercise.
+# Prompts live here, never inline in feature services, so they can be reviewed
+# and versioned in one place. Feature templates are added as features land.
 # ---------------------------------------------------------------------------
 
 _EXAMPLE_TEMPLATE = PromptTemplate(
@@ -53,8 +52,38 @@ _EXAMPLE_TEMPLATE = PromptTemplate(
     user='Summarise the following text in one sentence as {"summary": "..."}:\n\n{{ text }}',
 )
 
+# Resume Match (Milestone 19B). The system prompt pins the output contract; the
+# user prompt carries the extracted resume text and the pasted job description.
+# Note the {{ var }} delimiters — single braces below would be literal, which is
+# why the platform deliberately uses double braces (see prompt_renderer).
+_RESUME_MATCH_TEMPLATE = PromptTemplate(
+    name="resume_match.v1",
+    description="Analyse how well a resume matches a job description.",
+    system=(
+        "You are an expert technical recruiter and resume coach. You compare a "
+        "candidate's resume against a job description and produce an honest, "
+        "specific match analysis. Respond with ONLY a single JSON object that "
+        "matches the requested schema exactly — no markdown, no code fences, no "
+        "commentary. Every list field must be an array of concise strings."
+    ),
+    user=(
+        "Analyse how well the RESUME matches the JOB DESCRIPTION and return a "
+        "JSON object with exactly these keys:\n"
+        "- overall_match_score: integer from 0 to 100\n"
+        "- strengths: array of strings (where the candidate fits well)\n"
+        "- weaknesses: array of strings (gaps or weak areas relative to the role)\n"
+        "- missing_skills: array of strings (required skills absent from the resume)\n"
+        "- recommended_keywords: array of strings (ATS keywords to add)\n"
+        "- recommended_resume_changes: array of strings (specific edits to make)\n"
+        "- interview_topics: array of strings (topics likely to come up)\n\n"
+        "RESUME:\n{{ resume_text }}\n\n"
+        "JOB DESCRIPTION:\n{{ job_description }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
+    _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
 }
 
 

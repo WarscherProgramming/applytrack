@@ -15,3 +15,4 @@ from app.features.gmail.models import EmailMessage, GmailAccount  # noqa: F401
 from app.features.resumes.model import Resume  # noqa: F401
 from app.features.cover_letters.model import CoverLetter  # noqa: F401
 from app.ai.usage_tracker import AIUsageRecord  # noqa: F401
+from app.features.resume_match.model import ResumeMatchAnalysis  # noqa: F401
