@@ -133,8 +133,8 @@ quality gates.
   `feature/ai-interview-prep`, …). Use `chore/...` or `perf/...` for
   non-feature work (e.g. `chore/frontend-code-splitting`).
 - Branch from `main`, do the milestone, ensure the Definition of Done, then merge
-  back. Several AI milestones were built on top of each other; when a milestone
-  depends on an unmerged one, branch from (or fast-forward-merge in) that branch.
+  back. If a future milestone depends on unmerged work, branch from that feature
+  branch or fast-forward-merge it before continuing.
 - Never commit `.env` or `node_modules`. Do not commit `backend/storage/`.
 
 ## Commit style

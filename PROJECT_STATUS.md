@@ -24,12 +24,11 @@ quality at each step: strict layering, tests, and migrations.
 - Frontend version: `0.1.0` (`frontend/package.json`)
 - Database schema: Alembic revisions `0001` → `0010`
 - Backend tests: **419 passing** (last full run), no external network calls
-- Latest **committed** milestone: **M20 — AI Cover Letter Generator** (`59beed7`)
-- **M21 — AI Interview Preparation is implemented in the working tree but not yet
-  committed.** First handoff task: review and commit it (see §7). Migration
-  `0010` and the `interview_ai` feature belong to M21.
+- Latest **committed** milestone: **M21 — AI Interview Preparation** (`84819c0`)
+- Current `HEAD` includes AI Interview Preparation, including migration `0010`,
+  the `interview_ai` backend feature, and the frontend Interview Prep workflow.
 
-### Milestone history (from git + working tree)
+### Milestone history (from git)
 
 | Milestone | Scope | State |
 |----------|-------|-------|
@@ -45,7 +44,7 @@ quality at each step: strict layering, tests, and migrations.
 | M19A | AI Platform Foundation | committed |
 | M19B | AI Resume Match | committed |
 | M20 | AI Cover Letter Generator | committed |
-| **M21** | **AI Interview Preparation** | **in working tree (uncommitted)** |
+| **M21** | **AI Interview Preparation** | **committed** |
 
 ## 3. Completed features
 
@@ -85,11 +84,11 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
 ## 4. Current roadmap
 
 Short term (recommended order):
-1. **Commit M21** (interview prep) and tag the AI suite as complete.
-2. **Authentication & multi-user** — _the biggest gap_ (see §5). The app is
+1. **M22 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
+   §5). The app is
    currently single-user with no auth; the Settings page explicitly says
    "Authentication arrives in a later milestone."
-3. **Analytics AI / insights dashboard** — leverage stored data +
+2. **Analytics AI / insights dashboard** — leverage stored data +
    `ai_usage_records` for spend and pipeline insights.
 
 Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
@@ -131,6 +130,10 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
   `STORAGE_LOCAL_PATH`, `STORAGE_MAX_UPLOAD_BYTES`, `GOOGLE_CLIENT_ID`,
   `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GMAIL_SIMULATION`. See
   [CONTRIBUTING.md](CONTRIBUTING.md#environment-variables).
+- **TypeScript build info is tracked.** `frontend/tsconfig.app.tsbuildinfo` and
+  `frontend/tsconfig.node.tsbuildinfo` are generated build artifacts currently
+  tracked by Git; consider removing them from the repository and ignoring
+  `*.tsbuildinfo`.
 
 **Testing / tooling**
 - **No frontend tests** beyond `build` / `lint` / `typecheck` (no unit or E2E).
@@ -166,5 +169,5 @@ Suggested shape (consistent with existing patterns):
 - Frontend: login/register, auth context, token handling in `api-client.ts`,
   route guards; flesh out the Settings → Account card.
 
-First, though: **commit the in-tree M21 work** and consider tackling the §5
-cleanup items (delete stub dirs, complete `.env.example`).
+Before starting M22, consider tackling the §5 cleanup items (delete stub dirs,
+complete `.env.example`, and stop tracking generated TypeScript build info).
