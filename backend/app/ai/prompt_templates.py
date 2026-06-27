@@ -81,9 +81,38 @@ _RESUME_MATCH_TEMPLATE = PromptTemplate(
     ),
 )
 
+# Cover Letter Generator (Milestone 20). Produces both Markdown and plain-text
+# versions in one structured response. The system prompt forbids fabrication —
+# the letter may only draw on experience present in the resume.
+_COVER_LETTER_TEMPLATE = PromptTemplate(
+    name="cover_letter.v1",
+    description="Generate a tailored cover letter from a resume and job posting.",
+    system=(
+        "You are an expert career writer who drafts concise, compelling, "
+        "professional cover letters. Strict rules: personalise the letter to the "
+        "specific company and role; draw ONLY on experience and skills that "
+        "appear in the candidate's resume — never invent employers, titles, "
+        "metrics, or skills; align the letter with the job description's "
+        "priorities; keep a confident, natural, non-generic tone. Respond with "
+        "ONLY a single JSON object with exactly two string keys: 'markdown' (the "
+        "cover letter in Markdown) and 'plain_text' (the same letter as plain "
+        "text with no Markdown syntax). No code fences, no commentary."
+    ),
+    user=(
+        "Write a cover letter for this candidate.\n\n"
+        "COMPANY: {{ company_name }}\n"
+        "JOB TITLE: {{ job_title }}\n\n"
+        "JOB DESCRIPTION:\n{{ job_description }}\n\n"
+        "CANDIDATE RESUME:\n{{ resume_text }}\n\n"
+        "OPTIONAL TEMPLATE / STYLE TO FOLLOW (may be 'None'):\n{{ template }}\n\n"
+        "OPTIONAL GUIDANCE FROM THE CANDIDATE (may be 'None'):\n{{ user_notes }}"
+    ),
+)
+
 _TEMPLATES: dict[str, PromptTemplate] = {
     _EXAMPLE_TEMPLATE.name: _EXAMPLE_TEMPLATE,
     _RESUME_MATCH_TEMPLATE.name: _RESUME_MATCH_TEMPLATE,
+    _COVER_LETTER_TEMPLATE.name: _COVER_LETTER_TEMPLATE,
 }
 
 

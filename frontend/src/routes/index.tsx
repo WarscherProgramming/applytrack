@@ -34,6 +34,11 @@ const ResumeMatchPage = lazy(() =>
     default: m.ResumeMatchPage,
   })),
 );
+const CoverLetterAIPage = lazy(() =>
+  import('@/pages/cover-letter-ai-page').then((m) => ({
+    default: m.CoverLetterAIPage,
+  })),
+);
 const InterviewsPage = lazy(() =>
   import('@/pages/interviews-page').then((m) => ({ default: m.InterviewsPage })),
 );
@@ -63,6 +68,7 @@ export const router = createBrowserRouter([
       { path: 'resumes', element: <ResumesPage /> },
       { path: 'cover-letters', element: <CoverLettersPage /> },
       { path: 'resume-match', element: <ResumeMatchPage /> },
+      { path: 'cover-letter-ai', element: <CoverLetterAIPage /> },
       { path: 'interviews', element: <InterviewsPage /> },
       { path: 'followups', element: <FollowupsPage /> },
       { path: 'settings', element: <SettingsPage /> },
