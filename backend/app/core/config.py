@@ -39,6 +39,33 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/gmail/callback"
     GMAIL_SIMULATION: bool = True
 
+    # AI platform.
+    # AI_PROVIDER selects the adapter behind the AIProvider abstraction
+    # (see app.ai). "mock" returns deterministic canned output for local dev and
+    # tests; "openai" calls the real API but only activates when OPENAI_API_KEY
+    # is set — otherwise the platform transparently falls back to the mock so the
+    # app always runs without external credentials. No provider-specific config
+    # leaks into feature services; they consume app.ai's AIClient only.
+    AI_PROVIDER: Literal["mock", "openai"] = "mock"
+    OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    AI_MODEL: str = "gpt-4o-mini"
+    # Number of *retries* for transient provider failures (attempts = retries+1).
+    AI_MAX_RETRIES: int = 2
+    AI_REQUEST_TIMEOUT: float = 30.0
+
+    @property
+    def ai_configured(self) -> bool:
+        """True when real OpenAI credentials are present."""
+        return bool(self.OPENAI_API_KEY)
+
+    @property
+    def ai_active_provider(self) -> str:
+        """Resolved provider: 'openai' only when selected AND a key exists."""
+        if self.AI_PROVIDER == "openai" and self.OPENAI_API_KEY:
+            return "openai"
+        return "mock"
+
     # File storage (resumes, cover letters).
     # STORAGE_BACKEND selects the implementation behind the FileStorage
     # abstraction (see app.shared.storage). "local" writes to STORAGE_LOCAL_PATH;
