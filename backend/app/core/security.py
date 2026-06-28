@@ -1,3 +1,4 @@
+import hashlib
 from datetime import UTC, datetime, timedelta
 
 from jose import JWTError, jwt
@@ -17,6 +18,20 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return _pwd_context.verify(plain_password, hashed_password)
+
+
+def validate_strong_password(password: str) -> str:
+    if not any(char.islower() for char in password):
+        raise ValueError("Password must include a lowercase letter")
+    if not any(char.isupper() for char in password):
+        raise ValueError("Password must include an uppercase letter")
+    if not any(char.isdigit() for char in password):
+        raise ValueError("Password must include a number")
+    return password
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def create_access_token(

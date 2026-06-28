@@ -21,6 +21,36 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
             )
         ).first()
 
+    def get_for_user_by_hash(self, user: User, token_hash: str) -> RefreshToken | None:
+        return self.db.scalars(
+            select(RefreshToken).where(
+                RefreshToken.user_id == user.id,
+                RefreshToken.token_hash == token_hash,
+            )
+        ).first()
+
+    def list_for_user(self, user: User) -> list[RefreshToken]:
+        return list(
+            self.db.scalars(
+                select(RefreshToken)
+                .where(RefreshToken.user_id == user.id)
+                .order_by(RefreshToken.created_at.desc())
+            ).all()
+        )
+
+    def list_active_for_user(self, user: User) -> list[RefreshToken]:
+        return list(
+            self.db.scalars(
+                select(RefreshToken)
+                .where(
+                    RefreshToken.user_id == user.id,
+                    RefreshToken.revoked_at.is_(None),
+                    RefreshToken.expires_at > datetime.now(UTC),
+                )
+                .order_by(RefreshToken.created_at.desc())
+            ).all()
+        )
+
     def revoke(self, refresh_token: RefreshToken) -> RefreshToken:
         refresh_token.revoked_at = datetime.now(UTC)
         self.db.flush()
@@ -30,6 +60,17 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
         for token in self.db.scalars(
             select(RefreshToken).where(
                 RefreshToken.user_id == user.id,
+                RefreshToken.revoked_at.is_(None),
+            )
+        ):
+            token.revoked_at = datetime.now(UTC)
+        self.db.flush()
+
+    def revoke_all_for_user_except_hash(self, user: User, token_hash: str) -> None:
+        for token in self.db.scalars(
+            select(RefreshToken).where(
+                RefreshToken.user_id == user.id,
+                RefreshToken.token_hash != token_hash,
                 RefreshToken.revoked_at.is_(None),
             )
         ):

@@ -1,4 +1,3 @@
-import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -6,7 +5,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token, hash_password, hash_token, verify_password
 from app.exceptions.http import ConflictError, UnauthorizedError
 from app.features.auth.repository import RefreshTokenRepository
 from app.features.auth.schemas import (
@@ -49,7 +48,7 @@ class AuthService:
         return self._issue_tokens(user)
 
     def refresh(self, data: RefreshRequest) -> TokenResponse:
-        token = self.refresh_repo.get_valid(_token_hash(data.refresh_token))
+        token = self.refresh_repo.get_valid(hash_token(data.refresh_token))
         if token is None:
             raise UnauthorizedError("Invalid refresh token")
         user = self.user_repo.get_active(token.user_id)
@@ -60,7 +59,7 @@ class AuthService:
 
     def logout(self, data: LogoutRequest, user: User | None = None) -> LogoutResponse:
         if data.refresh_token:
-            token = self.refresh_repo.get_valid(_token_hash(data.refresh_token))
+            token = self.refresh_repo.get_valid(hash_token(data.refresh_token))
             if token is not None:
                 self.refresh_repo.revoke(token)
             return LogoutResponse(logged_out=True)
@@ -74,7 +73,7 @@ class AuthService:
         self.refresh_repo.create(
             {
                 "user_id": user.id,
-                "token_hash": _token_hash(refresh_token),
+                "token_hash": hash_token(refresh_token),
                 "expires_at": datetime.now(UTC)
                 + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
             }
@@ -94,7 +93,3 @@ def parse_user_id(subject: str | None) -> UUID:
         return UUID(subject)
     except ValueError as exc:
         raise UnauthorizedError() from exc
-
-
-def _token_hash(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()

@@ -119,7 +119,9 @@ When seeding owned records directly, set `user_id=test_user.id`, and add
 cross-user 404/list-isolation coverage for new user-created resources. Keep
 external IO mocked: use the `MockProvider` / injected `AIClient` for AI, the
 simulated Gmail client, simulated calendar provider adapters, and deterministic
-auth tokens/password hashes in auth tests.
+auth tokens/password hashes in auth tests. For settings/security tests, exercise
+the real refresh-token flow where possible so password changes and session
+revocation prove the token hashing/revocation behavior end to end.
 
 ### Frontend (run inside the frontend container or locally in `frontend/`)
 

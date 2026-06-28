@@ -25,18 +25,21 @@ verification.
 
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
-- Database schema: Alembic revisions `0001` -> `0015`
-- Backend tests: **450 passing** (Docker-backed full suite), no external network
+- Database schema: Alembic revisions `0001` -> `0016`
+- Backend tests: **455 passing** (Docker-backed full suite), no external network
   calls.
-- Latest **committed** milestone: **M29 - Authentication** (`49ec6cc`)
-- Current `HEAD` includes Authentication: `auth` and `users` features,
-  `users` and `auth_refresh_tokens` tables, registration/login/refresh/logout/
-  current-user endpoints, a protected-user dependency, login/register pages,
-  frontend token handling, route guards, and account settings.
-- **M30 - User Data Ownership & Query Scoping is implemented in the working tree
-  but not yet committed.** It adds user ownership columns, scoped services and
-  repositories, route protection for existing domain APIs, safe local/demo
-  backfill, per-user uniqueness/dedupe constraints, and cross-user 404 behavior.
+- Latest **committed** milestone: **M30 - User Data Ownership & Query Scoping**
+  (`696a125`)
+- Current `HEAD` includes Authentication and User Data Ownership: `auth` and
+  `users` features, `users` and `auth_refresh_tokens` tables, protected route
+  dependency, frontend token handling, route guards, user ownership columns,
+  scoped services/repositories, safe local/demo backfill, per-user uniqueness/
+  dedupe constraints, and cross-user 404 behavior.
+- **M31 - Settings & Security is implemented in the working tree but not yet
+  committed.** It adds a dedicated settings feature, `user_settings` table,
+  account/profile preferences, notification preferences, password changes,
+  refresh-token session management, scoped JSON export, and a frontend settings
+  center.
 
 ### Milestone History
 
@@ -63,7 +66,8 @@ verification.
 | **M27** | **Calendar Integration** | **committed** |
 | **M28** | **Task System** | **committed** |
 | **M29** | **Authentication** | **committed** |
-| **M30** | **User Data Ownership & Query Scoping** | **in working tree (uncommitted)** |
+| **M30** | **User Data Ownership & Query Scoping** | **committed** |
+| **M31** | **Settings & Security** | **in working tree (uncommitted)** |
 
 ## 3. Completed Features
 
@@ -118,11 +122,15 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   by `users.id`, existing feature routers require the current-user dependency,
   create paths stamp `current_user.id`, list/read/update/delete paths are scoped
   by owner, and cross-user direct access returns 404.
+- **Settings & Security** (M31) - account profile settings, timezone and
+  notification preferences, app preferences, strong password changes,
+  refresh-token-backed session actions, scoped JSON export, and a frontend
+  settings center.
 
 ## 4. Current Roadmap
 
 Short term (recommended order):
-1. **Review and commit M30** (User Data Ownership & Query Scoping).
+1. **Review and commit M31** (Settings & Security).
 2. **Copilot persistence** - persist pinned/completed recommendations and daily
    briefing history once authentication and user scoping exist.
 
@@ -136,8 +144,8 @@ Planned/aspirational:
 
 **Architectural gaps**
 - **No organizations/teams yet.** M30 establishes single-user ownership and
-  query scoping only; shared workspaces, orgs, roles, billing, and cloud sync
-  remain out of scope.
+  query scoping only, and M31 adds individual account settings only; shared
+  workspaces, orgs, roles, billing, and cloud sync remain out of scope.
 - **Real provider paths are unverified end-to-end.** OpenAI, Gmail,
   Opportunity Discovery providers, and Google/Outlook calendar writes are
   covered with mocks/simulation but not live-provider validation.

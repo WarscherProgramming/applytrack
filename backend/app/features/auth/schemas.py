@@ -1,5 +1,6 @@
 from pydantic import EmailStr, Field, field_validator
 
+from app.core.security import validate_strong_password
 from app.features.users.schemas import UserResponse
 from app.shared.base_schema import AppBaseModel
 
@@ -12,13 +13,7 @@ class RegisterRequest(AppBaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str) -> str:
-        if not any(char.islower() for char in value):
-            raise ValueError("Password must include a lowercase letter")
-        if not any(char.isupper() for char in value):
-            raise ValueError("Password must include an uppercase letter")
-        if not any(char.isdigit() for char in value):
-            raise ValueError("Password must include a number")
-        return value
+        return validate_strong_password(value)
 
 
 class LoginRequest(AppBaseModel):
