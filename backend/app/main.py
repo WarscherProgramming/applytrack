@@ -25,6 +25,7 @@ from app.features.opportunity_discovery.router import router as opportunity_disc
 from app.features.recruiters.router import router as recruiters_router
 from app.features.resume_match.router import router as resume_match_router
 from app.features.resumes.router import router as resumes_router
+from app.features.tasks.router import router as tasks_router
 
 configure_logging()
 
@@ -76,6 +77,7 @@ app.include_router(job_intelligence_router, prefix=settings.API_V1_PREFIX)
 app.include_router(opportunity_discovery_router, prefix=settings.API_V1_PREFIX)
 app.include_router(daily_briefing_router, prefix=settings.API_V1_PREFIX)
 app.include_router(calendar_integration_router, prefix=settings.API_V1_PREFIX)
+app.include_router(tasks_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["infrastructure"])

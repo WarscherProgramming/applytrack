@@ -17,6 +17,7 @@ import {
   BellRing,
   Radar,
   CalendarSync,
+  ListTodo,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -42,6 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: 'Job Intelligence', path: '/job-intelligence', icon: Radar },
   { title: 'Opportunity Discovery', path: '/opportunity-discovery', icon: Compass },
   { title: 'Daily Briefing', path: '/daily-briefing', icon: BellRing },
+  { title: 'Tasks', path: '/tasks', icon: ListTodo },
   { title: 'Calendar Sync', path: '/settings/calendar', icon: CalendarSync },
   { title: 'Interviews', path: '/interviews', icon: CalendarClock },
   { title: 'Follow-ups', path: '/followups', icon: ListChecks },

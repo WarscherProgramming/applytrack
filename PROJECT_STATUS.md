@@ -22,17 +22,16 @@ quality at each step: strict layering, tests, and migrations.
 
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
-- Database schema: Alembic revisions `0001` → `0012`
-- Backend tests: **436 passing** on the last full committed run; M27 adds 4
-  calendar integration tests pending Docker-backed execution in this workspace.
-- Latest **committed** milestone: **M26 — Daily Briefing & Notifications** (`f5c31bd`)
-- Current `HEAD` includes Daily Briefing & Notifications: proactive briefing,
-  notification records, notification center UI, and the `notifications`
-  migration.
-- **M27 — Calendar Integration is implemented in the working tree but not yet
-  committed.** It adds the `calendar_integration` feature, Google/Outlook
-  provider foundations, ICS export, calendar sync settings UI, interview sync
-  controls, and the `calendar_connections` / `calendar_sync_events` migration.
+- Database schema: Alembic revisions `0001` → `0013`
+- Backend tests: **443 passing** (Docker-backed full suite), no external network
+  calls.
+- Latest **committed** milestone: **M27 — Calendar Integration** (`1c6ad8c`)
+- Current `HEAD` includes Calendar Integration: Google/Outlook provider
+  foundations, ICS export, calendar sync settings UI, interview sync controls,
+  and the `calendar_connections` / `calendar_sync_events` migration.
+- **M28 — Task System is implemented in the working tree but not yet committed.**
+  It adds the `tasks` feature, `tasks` table/migration, generation from Daily
+  Briefing/follow-ups/interviews/Gmail, and a Tasks frontend page.
 
 ### Milestone history (from git)
 
@@ -56,7 +55,8 @@ quality at each step: strict layering, tests, and migrations.
 | **M24** | **AI Job Intelligence Engine** | **committed** |
 | **M25** | **Opportunity Discovery Engine** | **committed** |
 | **M26** | **Daily Briefing & Notifications** | **committed** |
-| **M27** | **Calendar Integration** | **in working tree (uncommitted)** |
+| **M27** | **Calendar Integration** | **committed** |
+| **M28** | **Task System** | **in working tree (uncommitted)** |
 
 ## 3. Completed features
 
@@ -114,14 +114,18 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   running in deterministic simulation mode until real OAuth token exchange/API
   writes are enabled; ICS export works without OAuth. Sync is idempotent via
   stored external event IDs and event hashes.
+- **Task System** (M28) — actionable work queue with manual tasks, status
+  workflow, priority/source filters, and deterministic generation from Daily
+  Briefing recommendations, overdue follow-ups, upcoming interviews, and unread
+  recruiter emails.
 - **AI usage tracking** — every AI call is recorded in `ai_usage_records`
   (provider, model, tokens, estimated cost, latency, feature).
 
 ## 4. Current roadmap
 
 Short term (recommended order):
-1. **Review and commit M27** (Calendar Integration).
-2. **M28 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
+1. **Review and commit M28** (Task System).
+2. **M29 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
    §5). The app is
    currently single-user with no auth; the Settings page explicitly says
    "Authentication arrives in a later milestone."
@@ -198,7 +202,7 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 
 ## 7. Next recommended milestone
 
-**M28 — Authentication & Multi-User Foundation.**
+**M29 — Authentication & Multi-User Foundation.**
 
 Rationale: every other feature is built and stable, but the entire data model is
 unscoped to a user and the Settings UI already advertises forthcoming auth. This
@@ -212,5 +216,5 @@ Suggested shape (consistent with existing patterns):
 - Frontend: login/register, auth context, token handling in `api-client.ts`,
   route guards; flesh out the Settings → Account card.
 
-Before starting M28, consider tackling the §5 cleanup items (delete stub dirs,
+Before starting M29, consider tackling the §5 cleanup items (delete stub dirs,
 complete `.env.example`, and stop tracking generated TypeScript build info).

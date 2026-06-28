@@ -74,6 +74,9 @@ const CalendarIntegrationPage = lazy(() =>
     default: m.CalendarIntegrationPage,
   })),
 );
+const TasksPage = lazy(() =>
+  import('@/pages/tasks-page').then((m) => ({ default: m.TasksPage })),
+);
 const InterviewsPage = lazy(() =>
   import('@/pages/interviews-page').then((m) => ({ default: m.InterviewsPage })),
 );
@@ -110,6 +113,7 @@ export const router = createBrowserRouter([
       { path: 'job-intelligence', element: <JobIntelligencePage /> },
       { path: 'opportunity-discovery', element: <OpportunityDiscoveryPage /> },
       { path: 'daily-briefing', element: <DailyBriefingPage /> },
+      { path: 'tasks', element: <TasksPage /> },
       { path: 'settings/calendar', element: <CalendarIntegrationPage /> },
       { path: 'interviews', element: <InterviewsPage /> },
       { path: 'followups', element: <FollowupsPage /> },

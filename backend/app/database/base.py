@@ -19,4 +19,5 @@ from app.features.interviews.model import Interview  # noqa: F401
 from app.features.recruiters.model import Recruiter  # noqa: F401
 from app.features.resume_match.model import ResumeMatchAnalysis  # noqa: F401
 from app.features.resumes.model import Resume  # noqa: F401
+from app.features.tasks.model import Task  # noqa: F401
 from app.shared.base_model import Base  # noqa: F401
