@@ -32,10 +32,11 @@ class FollowUpRepository(BaseRepository[FollowUp]):
         overdue: bool = False,
         due_today: bool = False,
         due_this_week: bool = False,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[FollowUp], int]:
-        base = select(FollowUp)
+        base = select(FollowUp).where(FollowUp.user_id == user_id)
 
         if application_id is not None:
             base = base.where(FollowUp.application_id == application_id)

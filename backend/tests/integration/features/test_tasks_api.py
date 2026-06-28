@@ -9,10 +9,15 @@ from app.features.followups.model import FollowUp, FollowUpPriority, FollowUpSta
 from app.features.gmail.models import EmailMessage, GmailAccount
 from app.features.interviews.model import Interview, InterviewStatus, InterviewType
 from app.features.tasks.model import Task
+from app.features.users.model import User
 
 
-def _seed_context(db: Session) -> tuple[Company, JobApplication, FollowUp, Interview]:
-    company = Company(name="TaskCo", industry="Healthcare", location="Remote")
+def _seed_context(
+    db: Session, user: User
+) -> tuple[Company, JobApplication, FollowUp, Interview]:
+    company = Company(
+        name="TaskCo", industry="Healthcare", location="Remote", user_id=user.id
+    )
     db.add(company)
     db.flush()
     application = JobApplication(
@@ -20,6 +25,7 @@ def _seed_context(db: Session) -> tuple[Company, JobApplication, FollowUp, Inter
         job_title="Backend Engineer",
         status=ApplicationStatus.INTERVIEW.value,
         source="Opportunity Discovery: greenhouse",
+        user_id=user.id,
     )
     db.add(application)
     db.flush()
@@ -31,6 +37,7 @@ def _seed_context(db: Session) -> tuple[Company, JobApplication, FollowUp, Inter
         status=FollowUpStatus.PENDING.value,
         priority=FollowUpPriority.URGENT.value,
         due_date=date.today() - timedelta(days=2),
+        user_id=user.id,
     )
     interview = Interview(
         application_id=application.id,
@@ -39,14 +46,17 @@ def _seed_context(db: Session) -> tuple[Company, JobApplication, FollowUp, Inter
         duration_minutes=60,
         status=InterviewStatus.SCHEDULED.value,
         notes="Review API design.",
+        user_id=user.id,
     )
     db.add_all([followup, interview])
     db.flush()
     return company, application, followup, interview
 
 
-def _seed_unread_email(db: Session, company: Company, application: JobApplication) -> None:
-    account = GmailAccount(email_address="jobseeker@example.test")
+def _seed_unread_email(
+    db: Session, user: User, company: Company, application: JobApplication
+) -> None:
+    account = GmailAccount(email_address="jobseeker@example.test", user_id=user.id)
     db.add(account)
     db.flush()
     db.add(
@@ -65,13 +75,16 @@ def _seed_unread_email(db: Session, company: Company, application: JobApplicatio
             application_id=application.id,
             match_confidence=0.9,
             match_reason="recruiting email",
+            user_id=user.id,
         )
     )
     db.flush()
 
 
-def test_manual_task_lifecycle(client: TestClient, db: Session) -> None:
-    company, application, _, _ = _seed_context(db)
+def test_manual_task_lifecycle(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    company, application, _, _ = _seed_context(db, test_user)
 
     created = client.post(
         "/api/v1/tasks/",
@@ -108,9 +121,11 @@ def test_manual_task_lifecycle(client: TestClient, db: Session) -> None:
     assert deleted.status_code == 204
 
 
-def test_generated_tasks_are_idempotent(client: TestClient, db: Session) -> None:
-    company, application, followup, interview = _seed_context(db)
-    _seed_unread_email(db, company, application)
+def test_generated_tasks_are_idempotent(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    company, application, followup, interview = _seed_context(db, test_user)
+    _seed_unread_email(db, test_user, company, application)
 
     followups = client.post("/api/v1/tasks/generate/overdue-followups")
     interviews = client.post("/api/v1/tasks/generate/upcoming-interviews")
@@ -134,9 +149,9 @@ def test_generated_tasks_are_idempotent(client: TestClient, db: Session) -> None
 
 
 def test_task_filters_and_daily_briefing_generation(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_context(db)
+    _seed_context(db, test_user)
 
     generated = client.post("/api/v1/tasks/generate/daily-briefing")
     today = client.get("/api/v1/tasks/?status=today")

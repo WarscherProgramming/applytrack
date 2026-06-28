@@ -2,11 +2,12 @@ import uuid
 from datetime import date, datetime
 from enum import StrEnum
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
 class TaskStatus(StrEnum):
@@ -34,8 +35,9 @@ class TaskSource(StrEnum):
     DAILY_BRIEFING = "daily_briefing"
 
 
-class Task(BaseModel):
+class Task(UserOwnedMixin, BaseModel):
     __tablename__ = "tasks"
+    __table_args__ = (UniqueConstraint("user_id", "source_key", name="uq_tasks_user_source_key"),)
 
     title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -87,4 +89,4 @@ class Task(BaseModel):
 
     # Stable generated-task identity. Manual tasks leave this null; generated
     # tasks use it to update/skip instead of creating duplicates.
-    source_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    source_key: Mapped[str | None] = mapped_column(String(255), nullable=True)

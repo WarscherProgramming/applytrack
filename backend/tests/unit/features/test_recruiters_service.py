@@ -8,6 +8,8 @@ from app.features.recruiters.model import Recruiter
 from app.features.recruiters.schema import RecruiterCreate, RecruiterUpdate
 from app.features.recruiters.service import RecruiterService
 
+USER_ID = uuid4()
+
 
 @pytest.fixture
 def mock_repo() -> MagicMock:
@@ -22,6 +24,7 @@ def mock_company_repo() -> MagicMock:
 @pytest.fixture
 def service(mock_repo: MagicMock, mock_company_repo: MagicMock) -> RecruiterService:
     svc = RecruiterService.__new__(RecruiterService)
+    svc.user_id = USER_ID
     svc.repo = mock_repo
     svc.company_repo = mock_company_repo
     return svc
@@ -57,9 +60,10 @@ class TestRecruiterServiceCreate:
 
         result = service.create(RecruiterCreate(email="alice@example.com"))
 
-        mock_company_repo.get_or_raise.assert_not_called()
-        mock_repo.get_by_email.assert_called_once_with("alice@example.com")
+        mock_company_repo.get_or_raise_for_user.assert_not_called()
+        mock_repo.get_by_email.assert_called_once_with("alice@example.com", USER_ID)
         mock_repo.create.assert_called_once()
+        assert mock_repo.create.call_args[0][0]["user_id"] == USER_ID
         assert result is expected
 
     def test_creates_recruiter_with_first_name_only(
@@ -77,17 +81,21 @@ class TestRecruiterServiceCreate:
         self, service: RecruiterService, mock_repo: MagicMock, mock_company_repo: MagicMock
     ) -> None:
         company_id = uuid4()
-        mock_company_repo.get_or_raise.return_value = MagicMock()
+        mock_company_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.create.return_value = _make_recruiter(company_id=company_id)
 
         service.create(RecruiterCreate(first_name="Alice", company_id=company_id))
 
-        mock_company_repo.get_or_raise.assert_called_once_with(company_id)
+        mock_company_repo.get_or_raise_for_user.assert_called_once_with(
+            company_id, USER_ID
+        )
 
     def test_raises_not_found_when_company_does_not_exist(
         self, service: RecruiterService, mock_company_repo: MagicMock
     ) -> None:
-        mock_company_repo.get_or_raise.side_effect = NotFoundError("Company", uuid4())
+        mock_company_repo.get_or_raise_for_user.side_effect = NotFoundError(
+            "Company", uuid4()
+        )
 
         with pytest.raises(NotFoundError):
             service.create(RecruiterCreate(first_name="Alice", company_id=uuid4()))
@@ -123,17 +131,17 @@ class TestRecruiterServiceGet:
     ) -> None:
         recruiter_id = uuid4()
         expected = _make_recruiter(id=recruiter_id)
-        mock_repo.get_or_raise.return_value = expected
+        mock_repo.get_or_raise_for_user.return_value = expected
 
         result = service.get(recruiter_id)
 
-        mock_repo.get_or_raise.assert_called_once_with(recruiter_id)
+        mock_repo.get_or_raise_for_user.assert_called_once_with(recruiter_id, USER_ID)
         assert result is expected
 
     def test_propagates_not_found_from_repository(
         self, service: RecruiterService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Recruiter", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Recruiter", uuid4())
 
         with pytest.raises(NotFoundError):
             service.get(uuid4())
@@ -156,6 +164,7 @@ class TestRecruiterServiceList:
         mock_repo.list_paginated.assert_called_once_with(
             query="alice",
             company_id=company_id,
+            user_id=USER_ID,
             skip=5,
             limit=10,
         )
@@ -183,12 +192,12 @@ class TestRecruiterServiceUpdate:
     ) -> None:
         recruiter = _make_recruiter(first_name="Alice", title=None)
         updated = _make_recruiter(id=recruiter.id, first_name="Alice", title="Engineering")
-        mock_repo.get_or_raise.return_value = recruiter
+        mock_repo.get_or_raise_for_user.return_value = recruiter
         mock_repo.update.return_value = updated
 
         result = service.update(recruiter.id, RecruiterUpdate(title="Engineering"))
 
-        mock_company_repo.get_or_raise.assert_not_called()
+        mock_company_repo.get_or_raise_for_user.assert_not_called()
         mock_repo.update.assert_called_once_with(recruiter, {"title": "Engineering"})
         assert result is updated
 
@@ -197,31 +206,35 @@ class TestRecruiterServiceUpdate:
     ) -> None:
         recruiter = _make_recruiter()
         new_company_id = uuid4()
-        mock_repo.get_or_raise.return_value = recruiter
-        mock_company_repo.get_or_raise.return_value = MagicMock()
+        mock_repo.get_or_raise_for_user.return_value = recruiter
+        mock_company_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.update.return_value = recruiter
 
         service.update(recruiter.id, RecruiterUpdate(company_id=new_company_id))
 
-        mock_company_repo.get_or_raise.assert_called_once_with(new_company_id)
+        mock_company_repo.get_or_raise_for_user.assert_called_once_with(
+            new_company_id, USER_ID
+        )
 
     def test_allows_detaching_company_by_sending_null(
         self, service: RecruiterService, mock_repo: MagicMock, mock_company_repo: MagicMock
     ) -> None:
         recruiter = _make_recruiter(company_id=uuid4())
-        mock_repo.get_or_raise.return_value = recruiter
+        mock_repo.get_or_raise_for_user.return_value = recruiter
         mock_repo.update.return_value = recruiter
 
         service.update(recruiter.id, RecruiterUpdate(company_id=None))
 
-        mock_company_repo.get_or_raise.assert_not_called()
+        mock_company_repo.get_or_raise_for_user.assert_not_called()
 
     def test_raises_not_found_when_new_company_does_not_exist(
         self, service: RecruiterService, mock_repo: MagicMock, mock_company_repo: MagicMock
     ) -> None:
         recruiter = _make_recruiter()
-        mock_repo.get_or_raise.return_value = recruiter
-        mock_company_repo.get_or_raise.side_effect = NotFoundError("Company", uuid4())
+        mock_repo.get_or_raise_for_user.return_value = recruiter
+        mock_company_repo.get_or_raise_for_user.side_effect = NotFoundError(
+            "Company", uuid4()
+        )
 
         with pytest.raises(NotFoundError):
             service.update(recruiter.id, RecruiterUpdate(company_id=uuid4()))
@@ -230,7 +243,7 @@ class TestRecruiterServiceUpdate:
         self, service: RecruiterService, mock_repo: MagicMock
     ) -> None:
         recruiter = _make_recruiter(email="alice@example.com")
-        mock_repo.get_or_raise.return_value = recruiter
+        mock_repo.get_or_raise_for_user.return_value = recruiter
         mock_repo.get_by_email.return_value = _make_recruiter(email="bob@example.com")
 
         with pytest.raises(ConflictError):
@@ -242,7 +255,7 @@ class TestRecruiterServiceUpdate:
         self, service: RecruiterService, mock_repo: MagicMock
     ) -> None:
         recruiter = _make_recruiter(email="alice@example.com")
-        mock_repo.get_or_raise.return_value = recruiter
+        mock_repo.get_or_raise_for_user.return_value = recruiter
         mock_repo.update.return_value = recruiter
 
         # Sending the recruiter's existing email in a patch must not raise.
@@ -255,7 +268,7 @@ class TestRecruiterServiceUpdate:
     ) -> None:
         # Recruiter has only first_name set; clearing it leaves no identifier.
         recruiter = _make_recruiter(first_name="Alice", email=None, last_name=None)
-        mock_repo.get_or_raise.return_value = recruiter
+        mock_repo.get_or_raise_for_user.return_value = recruiter
 
         with pytest.raises(ValidationError):
             service.update(recruiter.id, RecruiterUpdate(first_name=None))
@@ -266,7 +279,7 @@ class TestRecruiterServiceUpdate:
         self, service: RecruiterService, mock_repo: MagicMock
     ) -> None:
         recruiter = _make_recruiter(first_name="Alice", email="alice@example.com")
-        mock_repo.get_or_raise.return_value = recruiter
+        mock_repo.get_or_raise_for_user.return_value = recruiter
         mock_repo.update.return_value = recruiter
 
         # Clearing first_name is fine because email still identifies the recruiter.
@@ -277,7 +290,7 @@ class TestRecruiterServiceUpdate:
     def test_propagates_not_found_when_recruiter_does_not_exist(
         self, service: RecruiterService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Recruiter", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Recruiter", uuid4())
 
         with pytest.raises(NotFoundError):
             service.update(uuid4(), RecruiterUpdate(title="Engineer"))
@@ -293,7 +306,7 @@ class TestRecruiterServiceDelete:
         self, service: RecruiterService, mock_repo: MagicMock
     ) -> None:
         recruiter = _make_recruiter()
-        mock_repo.get_or_raise.return_value = recruiter
+        mock_repo.get_or_raise_for_user.return_value = recruiter
 
         service.delete(recruiter.id)
 
@@ -302,7 +315,7 @@ class TestRecruiterServiceDelete:
     def test_propagates_not_found_from_repository(
         self, service: RecruiterService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Recruiter", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Recruiter", uuid4())
 
         with pytest.raises(NotFoundError):
             service.delete(uuid4())

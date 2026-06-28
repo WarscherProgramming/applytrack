@@ -6,6 +6,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.resume_match.model import ResumeMatchAnalysis
 from app.features.resume_match.schema import (
     ResumeMatchCreate,
@@ -21,8 +22,11 @@ router = APIRouter(prefix="/resume-match", tags=["resume_match"])
 _PREVIEW_CHARS = 160
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> ResumeMatchService:
-    return ResumeMatchService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> ResumeMatchService:
+    return ResumeMatchService(db, user.id)
 
 
 ServiceDep = Annotated[ResumeMatchService, Depends(_get_service)]

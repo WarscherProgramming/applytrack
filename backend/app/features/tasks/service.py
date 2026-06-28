@@ -34,8 +34,9 @@ PRIORITY_MAP = {
 
 
 class TaskService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, user_id: UUID) -> None:
         self.db = db
+        self.user_id = user_id
         self.repo = TaskRepository(db)
         self.application_repo = ApplicationRepository(db)
         self.company_repo = CompanyRepository(db)
@@ -48,10 +49,10 @@ class TaskService:
         self._validate_links(payload)
         if payload["status"] == TaskStatus.COMPLETED and payload["completed_at"] is None:
             payload["completed_at"] = datetime.now(UTC)
-        return self.repo.create(_enum_values(payload))
+        return self.repo.create(_enum_values(payload) | {"user_id": self.user_id})
 
     def get(self, task_id: UUID) -> Task:
-        return self.repo.get_or_raise(task_id)
+        return self.repo.get_or_raise_for_user(task_id, self.user_id)
 
     def list(
         self,
@@ -76,12 +77,13 @@ class TaskService:
             recruiter_id=recruiter_id,
             interview_id=interview_id,
             followup_id=followup_id,
+            user_id=self.user_id,
             skip=skip,
             limit=limit,
         )
 
     def update(self, task_id: UUID, data: TaskUpdate) -> Task:
-        task = self.repo.get_or_raise(task_id)
+        task = self.repo.get_or_raise_for_user(task_id, self.user_id)
         updates = data.model_dump(exclude_unset=True)
         self._validate_links(updates)
         if "status" in updates:
@@ -98,7 +100,7 @@ class TaskService:
         return self.repo.update(task, _enum_values(updates))
 
     def complete(self, task_id: UUID) -> Task:
-        task = self.repo.get_or_raise(task_id)
+        task = self.repo.get_or_raise_for_user(task_id, self.user_id)
         return self.repo.update(
             task,
             {
@@ -108,15 +110,15 @@ class TaskService:
         )
 
     def dismiss(self, task_id: UUID) -> Task:
-        task = self.repo.get_or_raise(task_id)
+        task = self.repo.get_or_raise_for_user(task_id, self.user_id)
         return self.repo.update(task, {"status": TaskStatus.DISMISSED.value})
 
     def delete(self, task_id: UUID) -> None:
-        task = self.repo.get_or_raise(task_id)
+        task = self.repo.get_or_raise_for_user(task_id, self.user_id)
         self.repo.delete(task)
 
     def generate_from_daily_briefing(self) -> TaskGenerationResponse:
-        briefing = DailyBriefingService(self.db).build_briefing()
+        briefing = DailyBriefingService(self.db, self.user_id).build_briefing()
         response = TaskGenerationResponse()
         for item in briefing.prioritized_actions:
             due_date = item.due_at.date() if item.due_at else briefing.briefing_date
@@ -153,7 +155,7 @@ class TaskService:
     def generate_from_overdue_followups(self) -> TaskGenerationResponse:
         today = date.today()
         response = TaskGenerationResponse()
-        for followup in self.repo.list_overdue_followups(today):
+        for followup in self.repo.list_overdue_followups(today, self.user_id):
             self._upsert_generated(response, self._followup_task(followup))
         return response
 
@@ -161,14 +163,16 @@ class TaskService:
         now = datetime.now(UTC)
         response = TaskGenerationResponse()
         for interview in self.repo.list_upcoming_interviews(
-            now=now, until=now + timedelta(days=7)
+            now=now,
+            until=now + timedelta(days=7),
+            user_id=self.user_id,
         ):
             self._upsert_generated(response, self._interview_task(interview))
         return response
 
     def generate_from_recruiter_emails(self) -> TaskGenerationResponse:
         response = TaskGenerationResponse()
-        for email in self.repo.list_unread_recruiter_emails():
+        for email in self.repo.list_unread_recruiter_emails(self.user_id):
             if _looks_recruiting_related(email):
                 self._upsert_generated(response, self._email_task(email))
         return response
@@ -191,8 +195,8 @@ class TaskService:
         self, response: TaskGenerationResponse, payload: dict
     ) -> Task:
         source_key = payload["source_key"]
-        existing = self.repo.get_by_source_key(source_key)
-        data = _enum_values(payload)
+        existing = self.repo.get_by_source_key(source_key, self.user_id)
+        data = _enum_values(payload) | {"user_id": self.user_id}
         if existing is None:
             task = self.repo.create(data)
             response.created += 1
@@ -223,7 +227,7 @@ class TaskService:
         }
 
     def _interview_task(self, interview: Interview) -> dict:
-        applications = {item.id: item for item in self.repo.list_applications()}
+        applications = {item.id: item for item in self.repo.list_applications(self.user_id)}
         application = applications.get(interview.application_id)
         title = (
             f"Prepare for interview: {application.job_title}"
@@ -266,15 +270,27 @@ class TaskService:
 
     def _validate_links(self, payload: dict) -> None:
         if payload.get("application_id") is not None:
-            self.application_repo.get_or_raise(payload["application_id"])
+            self.application_repo.get_or_raise_for_user(
+                payload["application_id"],
+                self.user_id,
+            )
         if payload.get("company_id") is not None:
-            self.company_repo.get_or_raise(payload["company_id"])
+            self.company_repo.get_or_raise_for_user(payload["company_id"], self.user_id)
         if payload.get("recruiter_id") is not None:
-            self.recruiter_repo.get_or_raise(payload["recruiter_id"])
+            self.recruiter_repo.get_or_raise_for_user(
+                payload["recruiter_id"],
+                self.user_id,
+            )
         if payload.get("interview_id") is not None:
-            self.interview_repo.get_or_raise(payload["interview_id"])
+            self.interview_repo.get_or_raise_for_user(
+                payload["interview_id"],
+                self.user_id,
+            )
         if payload.get("followup_id") is not None:
-            self.followup_repo.get_or_raise(payload["followup_id"])
+            self.followup_repo.get_or_raise_for_user(
+                payload["followup_id"],
+                self.user_id,
+            )
 
 
 def _enum_values(payload: dict) -> dict:

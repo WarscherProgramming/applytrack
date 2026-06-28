@@ -1,5 +1,6 @@
 import logging
 from typing import TypeVar
+from uuid import UUID
 
 from sqlalchemy import func, select
 
@@ -19,10 +20,13 @@ class DocumentRepository(BaseRepository[DocumentT]):
     version-numbering and library-listing queries common to both.
     """
 
-    def next_version(self, name: str) -> int:
+    def next_version(self, name: str, user_id: UUID) -> int:
         """Next 1-based version number for documents sharing `name`."""
         current_max = self.db.scalar(
-            select(func.max(self.model.version)).where(self.model.name == name)
+            select(func.max(self.model.version)).where(
+                self.model.name == name,
+                self.model.user_id == user_id,
+            )
         )
         return (current_max or 0) + 1
 
@@ -31,10 +35,11 @@ class DocumentRepository(BaseRepository[DocumentT]):
         *,
         query: str | None = None,
         name: str | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[DocumentT], int]:
-        base = select(self.model)
+        base = select(self.model).where(self.model.user_id == user_id)
 
         if query:
             like = f"%{query}%"

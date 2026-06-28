@@ -113,9 +113,13 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pip 
 ```
 
 Tests use a separate `<db>_test` database, roll back per test, and make **no
-external network calls**. Keep it that way: use the `MockProvider` / injected
-`AIClient` for AI, the simulated Gmail client, simulated calendar provider
-adapters, and deterministic auth tokens/password hashes in auth tests.
+external network calls**. The default `client` fixture authenticates as a
+generated active test user; use `anonymous_client` for unauthenticated cases.
+When seeding owned records directly, set `user_id=test_user.id`, and add
+cross-user 404/list-isolation coverage for new user-created resources. Keep
+external IO mocked: use the `MockProvider` / injected `AIClient` for AI, the
+simulated Gmail client, simulated calendar provider adapters, and deterministic
+auth tokens/password hashes in auth tests.
 
 ### Frontend (run inside the frontend container or locally in `frontend/`)
 
@@ -163,24 +167,27 @@ A milestone is complete only when **all** of the following hold:
 
 1. **Layering respected** — `router → service → repository → model`; repositories
    never `commit()`; services raise `AppError` subclasses.
-2. **AI boundary respected** — features use only the `app.ai` public surface; no
+2. **Ownership respected** — user-created records carry `user_id`, routers use
+   `CurrentUser`, create paths stamp `current_user.id`, and list/get/update/delete
+   paths are scoped so cross-user access returns 404.
+3. **AI boundary respected** — features use only the `app.ai` public surface; no
    provider-specific code or inline prompts outside `app/ai/`; prompts added to
    the central registry.
-3. **Migrations** — any schema change has a hand-written, reversible Alembic
+4. **Migrations** — any schema change has a hand-written, reversible Alembic
    migration; the new model is registered in `database/base.py`;
    `alembic upgrade head` applies cleanly.
-4. **Backend tests pass** — `pytest` green, including new unit + integration
+5. **Backend tests pass** — `pytest` green, including new unit + integration
    tests for the milestone. **No real external API calls** in tests.
-5. **Frontend builds** — `npm run build` passes (so does `lint`/`typecheck`);
+6. **Frontend builds** — `npm run build` passes (so does `lint`/`typecheck`);
    new routes are lazy-loaded in `routes/index.tsx` and added to
    `app/navigation.ts`.
-6. **Docker works** — the dev stack builds and runs; a manual end-to-end check of
+7. **Docker works** — the dev stack builds and runs; a manual end-to-end check of
    the new flow succeeds (the app must work fully offline via mock AI,
    simulated Gmail, and simulated calendar sync where applicable).
-7. **No regressions** — existing tests still pass; existing features unaffected
+8. **No regressions** — existing tests still pass; existing features unaffected
    (notably: do not modify Gmail behaviour or revert the Vite `manualChunks`
    config).
-8. **Docs** — update [PROJECT_STATUS.md](PROJECT_STATUS.md) (milestone status,
+9. **Docs** — update [PROJECT_STATUS.md](PROJECT_STATUS.md) (milestone status,
    roadmap, debt) when scope or state changes.
 
 ## Conventions cheat-sheet

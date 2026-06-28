@@ -33,10 +33,11 @@ class ResumeMatchService:
     no external calls, fully deterministic.
     """
 
-    def __init__(self, db: Session, *, ai_client: AIClient | None = None) -> None:
+    def __init__(self, db: Session, user_id: UUID, *, ai_client: AIClient | None = None) -> None:
         self.db = db
+        self.user_id = user_id
         self.repo = ResumeMatchRepository(db)
-        self.resume_service = ResumeService(db)
+        self.resume_service = ResumeService(db, user_id)
         self.ai_client = ai_client or self._default_client()
 
     @staticmethod
@@ -73,6 +74,7 @@ class ResumeMatchService:
             ResumeMatchResult,
             db=self.db,
             feature=FEATURE,
+            user_id=self.user_id,
         )
         result: ResumeMatchResult = structured.data
 
@@ -85,6 +87,7 @@ class ResumeMatchService:
                 "result": result.model_dump(),
                 "provider": structured.result.provider,
                 "model": structured.result.model,
+                "user_id": self.user_id,
             }
         )
         logger.info(
@@ -98,7 +101,7 @@ class ResumeMatchService:
         return analysis
 
     def get(self, analysis_id: UUID) -> ResumeMatchAnalysis:
-        return self.repo.get_or_raise(analysis_id)
+        return self.repo.get_or_raise_for_user(analysis_id, self.user_id)
 
     def list(
         self,
@@ -107,9 +110,14 @@ class ResumeMatchService:
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[list[ResumeMatchAnalysis], int]:
-        return self.repo.list_paginated(resume_id=resume_id, skip=skip, limit=limit)
+        return self.repo.list_paginated(
+            resume_id=resume_id,
+            user_id=self.user_id,
+            skip=skip,
+            limit=limit,
+        )
 
     def delete(self, analysis_id: UUID) -> None:
-        analysis = self.repo.get_or_raise(analysis_id)
+        analysis = self.repo.get_or_raise_for_user(analysis_id, self.user_id)
         self.repo.delete(analysis)
         logger.info("Deleted resume match analysis id=%s", analysis_id)

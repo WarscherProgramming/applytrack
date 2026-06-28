@@ -2,9 +2,10 @@ from sqlalchemy import Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
-class DocumentBase(BaseModel):
+class DocumentBase(UserOwnedMixin, BaseModel):
     """
     Abstract base for every stored document (resumes, cover letters).
 

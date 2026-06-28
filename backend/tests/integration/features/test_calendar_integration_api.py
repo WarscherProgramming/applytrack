@@ -8,10 +8,16 @@ from app.features.calendar_integration.model import CalendarSyncEvent, CalendarS
 from app.features.companies.model import Company
 from app.features.followups.model import FollowUp, FollowUpPriority, FollowUpStatus, FollowUpType
 from app.features.interviews.model import Interview, InterviewStatus, InterviewType
+from app.features.users.model import User
 
 
-def _seed_calendar_items(db: Session) -> tuple[Interview, FollowUp]:
-    company = Company(name="Acme Calendar", industry="Healthcare", location="Remote")
+def _seed_calendar_items(db: Session, user: User) -> tuple[Interview, FollowUp]:
+    company = Company(
+        name="Acme Calendar",
+        industry="Healthcare",
+        location="Remote",
+        user_id=user.id,
+    )
     db.add(company)
     db.flush()
     application = JobApplication(
@@ -20,6 +26,7 @@ def _seed_calendar_items(db: Session) -> tuple[Interview, FollowUp]:
         status=ApplicationStatus.INTERVIEW.value,
         date_applied=date.today(),
         source="Greenhouse",
+        user_id=user.id,
     )
     db.add(application)
     db.flush()
@@ -31,6 +38,7 @@ def _seed_calendar_items(db: Session) -> tuple[Interview, FollowUp]:
         meeting_link="https://meet.example.test/calendar",
         status=InterviewStatus.SCHEDULED.value,
         notes="Review system design notes.",
+        user_id=user.id,
     )
     followup = FollowUp(
         application_id=application.id,
@@ -40,6 +48,7 @@ def _seed_calendar_items(db: Session) -> tuple[Interview, FollowUp]:
         status=FollowUpStatus.PENDING.value,
         priority=FollowUpPriority.HIGH.value,
         due_date=date.today() + timedelta(days=1),
+        user_id=user.id,
     )
     db.add_all([interview, followup])
     db.flush()
@@ -64,9 +73,9 @@ def test_calendar_status_and_simulated_connect(client: TestClient) -> None:
 
 
 def test_ics_export_includes_interviews_and_followups(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_calendar_items(db)
+    _seed_calendar_items(db, test_user)
 
     response = client.get("/api/v1/calendar-integration/ics")
 
@@ -78,8 +87,10 @@ def test_ics_export_includes_interviews_and_followups(
     assert "SUMMARY:Follow-up: Send thank-you note" in body
 
 
-def test_manual_sync_is_idempotent(client: TestClient, db: Session) -> None:
-    _seed_calendar_items(db)
+def test_manual_sync_is_idempotent(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    _seed_calendar_items(db, test_user)
     client.post("/api/v1/calendar-integration/connect/google")
 
     first = client.post(
@@ -101,9 +112,9 @@ def test_manual_sync_is_idempotent(client: TestClient, db: Session) -> None:
 
 
 def test_sync_updates_and_deletes_inactive_items(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    interview, followup = _seed_calendar_items(db)
+    interview, followup = _seed_calendar_items(db, test_user)
     client.post("/api/v1/calendar-integration/connect/google")
     client.post(
         "/api/v1/calendar-integration/sync",

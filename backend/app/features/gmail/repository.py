@@ -16,8 +16,9 @@ class GmailAccountRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_account(self) -> GmailAccount | None:
-        return self.db.scalars(select(GmailAccount).limit(1)).first()
+    def get_account(self, user_id: UUID) -> GmailAccount | None:
+        stmt = select(GmailAccount).where(GmailAccount.user_id == user_id).limit(1)
+        return self.db.scalars(stmt).first()
 
     def create(self, data: dict[str, Any]) -> GmailAccount:
         account = GmailAccount(**data)
@@ -69,10 +70,11 @@ class EmailMessageRepository:
         recruiter_id: UUID | None = None,
         interview_id: UUID | None = None,
         query: str | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[list[EmailMessage], int]:
-        base = select(EmailMessage)
+        base = select(EmailMessage).where(EmailMessage.user_id == user_id)
 
         if application_id is not None:
             base = base.where(EmailMessage.application_id == application_id)
@@ -104,6 +106,9 @@ class EmailMessageRepository:
         )
         return items, total
 
-    def all_for_account(self, account_id: UUID) -> list[EmailMessage]:
-        stmt = select(EmailMessage).where(EmailMessage.account_id == account_id)
+    def all_for_account(self, account_id: UUID, user_id: UUID) -> list[EmailMessage]:
+        stmt = select(EmailMessage).where(
+            EmailMessage.account_id == account_id,
+            EmailMessage.user_id == user_id,
+        )
         return list(self.db.scalars(stmt).all())

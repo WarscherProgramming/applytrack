@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from statistics import mean
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -163,9 +164,10 @@ class CareerIntelligenceService:
     metric calculations and a provider failure does not break the dashboard.
     """
 
-    def __init__(self, db: Session, *, ai_client: AIClient | None = None) -> None:
+    def __init__(self, db: Session, user_id: UUID, *, ai_client: AIClient | None = None) -> None:
         self.db = db
-        self.repo = CareerIntelligenceRepository(db)
+        self.user_id = user_id
+        self.repo = CareerIntelligenceRepository(db, user_id)
         self._injected_client = ai_client
 
     def build_dashboard(
@@ -530,6 +532,7 @@ class CareerIntelligenceService:
                 AIRecommendationResult,
                 db=self.db,
                 feature=FEATURE,
+                user_id=self.user_id,
             )
             return AIRecommendations(
                 available=True,

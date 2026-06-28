@@ -13,8 +13,9 @@ from app.features.interviews.model import Interview, InterviewStatus
 
 
 class DailyBriefingRepository:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, user_id: UUID) -> None:
         self.db = db
+        self.user_id = user_id
 
     def list_followups_due_today(self, today: date) -> list[FollowUp]:
         return list(
@@ -23,6 +24,7 @@ class DailyBriefingRepository:
                 .where(
                     FollowUp.status == FollowUpStatus.PENDING.value,
                     FollowUp.due_date == today,
+                    FollowUp.user_id == self.user_id,
                 )
                 .order_by(FollowUp.priority.desc(), FollowUp.created_at.asc())
             ).all()
@@ -35,6 +37,7 @@ class DailyBriefingRepository:
                 .where(
                     FollowUp.status == FollowUpStatus.PENDING.value,
                     FollowUp.due_date < today,
+                    FollowUp.user_id == self.user_id,
                 )
                 .order_by(FollowUp.due_date.asc())
             ).all()
@@ -48,6 +51,7 @@ class DailyBriefingRepository:
                     Interview.status == InterviewStatus.SCHEDULED.value,
                     Interview.scheduled_at >= now,
                     Interview.scheduled_at <= until,
+                    Interview.user_id == self.user_id,
                 )
                 .order_by(Interview.scheduled_at.asc())
             ).all()
@@ -60,6 +64,7 @@ class DailyBriefingRepository:
                 .where(
                     EmailMessage.sent_at >= since,
                     EmailMessage.direction == "inbound",
+                    EmailMessage.user_id == self.user_id,
                 )
                 .order_by(EmailMessage.sent_at.desc())
                 .limit(25)
@@ -73,23 +78,36 @@ class DailyBriefingRepository:
                 .where(
                     JobApplication.created_at >= since,
                     JobApplication.source.ilike("Opportunity Discovery:%"),
+                    JobApplication.user_id == self.user_id,
                 )
                 .order_by(JobApplication.created_at.desc())
             ).all()
         )
 
     def list_applications(self) -> list[JobApplication]:
-        return list(self.db.scalars(select(JobApplication)).all())
+        return list(
+            self.db.scalars(
+                select(JobApplication).where(JobApplication.user_id == self.user_id)
+            ).all()
+        )
 
     def list_companies(self) -> list[Company]:
-        return list(self.db.scalars(select(Company)).all())
+        return list(self.db.scalars(select(Company).where(Company.user_id == self.user_id)).all())
 
     def get_notification(self, notification_id: UUID) -> Notification | None:
-        return self.db.get(Notification, notification_id)
+        return self.db.scalars(
+            select(Notification).where(
+                Notification.id == notification_id,
+                Notification.user_id == self.user_id,
+            )
+        ).first()
 
     def get_notification_by_dedupe_key(self, dedupe_key: str) -> Notification | None:
         return self.db.scalars(
-            select(Notification).where(Notification.dedupe_key == dedupe_key)
+            select(Notification).where(
+                Notification.dedupe_key == dedupe_key,
+                Notification.user_id == self.user_id,
+            )
         ).first()
 
     def upsert_notification(self, data: dict) -> Notification:
@@ -99,7 +117,7 @@ class DailyBriefingRepository:
                 setattr(existing, key, data[key])
             self.db.flush()
             return existing
-        notification = Notification(**data)
+        notification = Notification(**(data | {"user_id": self.user_id}))
         self.db.add(notification)
         self.db.flush()
         return notification
@@ -119,7 +137,7 @@ class DailyBriefingRepository:
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[list[Notification], int]:
-        base = select(Notification)
+        base = select(Notification).where(Notification.user_id == self.user_id)
         if not include_dismissed:
             base = base.where(Notification.is_dismissed.is_(False))
         if unread_only:
@@ -147,6 +165,7 @@ class DailyBriefingRepository:
             .where(
                 Notification.is_read.is_(False),
                 Notification.is_dismissed.is_(False),
+                Notification.user_id == self.user_id,
             )
         ) or 0
 
@@ -157,5 +176,6 @@ class DailyBriefingRepository:
             .where(
                 Notification.is_pinned.is_(True),
                 Notification.is_dismissed.is_(False),
+                Notification.user_id == self.user_id,
             )
         ) or 0

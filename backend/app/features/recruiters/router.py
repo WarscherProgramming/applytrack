@@ -6,6 +6,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.recruiters.model import Recruiter
 from app.features.recruiters.schema import (
     RecruiterCreate,
@@ -18,8 +19,11 @@ from app.features.recruiters.service import RecruiterService
 router = APIRouter(prefix="/recruiters", tags=["recruiters"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> RecruiterService:
-    return RecruiterService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> RecruiterService:
+    return RecruiterService(db, user.id)
 
 
 ServiceDep = Annotated[RecruiterService, Depends(_get_service)]

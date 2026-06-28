@@ -16,6 +16,7 @@ from app.features.interview_ai.router import _get_service
 from app.features.interview_ai.schemas import InterviewPrepRequest
 from app.features.interview_ai.service import InterviewPrepService
 from app.features.resumes.service import ResumeService
+from app.features.users.model import User
 from app.main import app
 
 _RESULT = {
@@ -71,31 +72,39 @@ def _mock_client(response: str = _RESULT_JSON) -> AIClient:
     )
 
 
-def _create_resume(db: Session) -> str:
-    resume = ResumeService(db).upload(
+def _create_resume(db: Session, user: User) -> str:
+    resume = ResumeService(db, user.id).upload(
         file_name="resume.txt", content=b"Python engineer, 6 years.", name="R"
     )
     return str(resume.id)
 
 
-def _create_application(db: Session, *, resume_id: str | None = None) -> tuple[str, str]:
-    company = CompanyRepository(db).create({"name": "Acme"})
-    data = {"company_id": company.id, "job_title": "Senior Engineer"}
+def _create_application(
+    db: Session, user: User, *, resume_id: str | None = None
+) -> tuple[str, str]:
+    company = CompanyRepository(db).create({"name": "Acme", "user_id": user.id})
+    data = {
+        "company_id": company.id,
+        "job_title": "Senior Engineer",
+        "user_id": user.id,
+    }
     if resume_id is not None:
         data["resume_id"] = resume_id
     application = ApplicationRepository(db).create(data)
     return str(application.id), company.name
 
 
-def _inject(db: Session, ai_client: AIClient) -> None:
+def _inject(db: Session, user: User, ai_client: AIClient) -> None:
     app.dependency_overrides[_get_service] = lambda: InterviewPrepService(
-        db, ai_client=ai_client
+        db, user.id, ai_client=ai_client
     )
 
 
 class TestServiceGenerate:
-    def test_generates_with_explicit_company_and_title(self, db: Session) -> None:
-        service = InterviewPrepService(db, ai_client=_mock_client())
+    def test_generates_with_explicit_company_and_title(
+        self, db: Session, test_user: User
+    ) -> None:
+        service = InterviewPrepService(db, test_user.id, ai_client=_mock_client())
         pkg = service.create(
             InterviewPrepRequest(
                 job_description=_JOB_DESCRIPTION,
@@ -112,11 +121,13 @@ class TestServiceGenerate:
         assert pkg.total_tokens > 0
 
     def test_derives_company_title_and_resume_from_application(
-        self, db: Session
+        self, db: Session, test_user: User
     ) -> None:
-        resume_id = _create_resume(db)
-        application_id, company_name = _create_application(db, resume_id=resume_id)
-        service = InterviewPrepService(db, ai_client=_mock_client())
+        resume_id = _create_resume(db, test_user)
+        application_id, company_name = _create_application(
+            db, test_user, resume_id=resume_id
+        )
+        service = InterviewPrepService(db, test_user.id, ai_client=_mock_client())
 
         pkg = service.create(
             InterviewPrepRequest(
@@ -128,8 +139,8 @@ class TestServiceGenerate:
         # Falls back to the application's submitted resume.
         assert str(pkg.resume_id) == resume_id
 
-    def test_tracks_ai_usage(self, db: Session) -> None:
-        InterviewPrepService(db, ai_client=_mock_client()).create(
+    def test_tracks_ai_usage(self, db: Session, test_user: User) -> None:
+        InterviewPrepService(db, test_user.id, ai_client=_mock_client()).create(
             InterviewPrepRequest(
                 job_description=_JOB_DESCRIPTION,
                 company_name="Acme",
@@ -141,17 +152,19 @@ class TestServiceGenerate:
         assert usage[0].feature == "interview_prep"
         assert usage[0].success is True
 
-    def test_missing_company_and_title_raises(self, db: Session) -> None:
-        service = InterviewPrepService(db, ai_client=_mock_client())
+    def test_missing_company_and_title_raises(
+        self, db: Session, test_user: User
+    ) -> None:
+        service = InterviewPrepService(db, test_user.id, ai_client=_mock_client())
         with pytest.raises(ValidationError):
             service.create(InterviewPrepRequest(job_description=_JOB_DESCRIPTION))
 
 
 class TestGenerateApi:
     def test_returns_201_with_full_package(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
-        _inject(db, _mock_client())
+        _inject(db, test_user, _mock_client())
         response = client.post(
             "/api/v1/interview-prep/",
             json={
@@ -211,9 +224,9 @@ class TestGenerateApi:
         assert response.status_code == 422
 
     def test_invalid_ai_json_returns_502(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
-        _inject(db, _mock_client(response="not json"))
+        _inject(db, test_user, _mock_client(response="not json"))
         response = client.post(
             "/api/v1/interview-prep/",
             json={
@@ -226,8 +239,10 @@ class TestGenerateApi:
 
 
 class TestHistoryApi:
-    def test_list_reopen_and_delete(self, client: TestClient, db: Session) -> None:
-        _inject(db, _mock_client())
+    def test_list_reopen_and_delete(
+        self, client: TestClient, db: Session, test_user: User
+    ) -> None:
+        _inject(db, test_user, _mock_client())
         created = client.post(
             "/api/v1/interview-prep/",
             json={
@@ -249,8 +264,10 @@ class TestHistoryApi:
         )
         assert db.scalars(select(InterviewPrepPackage)).all() == []
 
-    def test_filter_by_application(self, client: TestClient, db: Session) -> None:
-        _inject(db, _mock_client())
+    def test_filter_by_application(
+        self, client: TestClient, db: Session, test_user: User
+    ) -> None:
+        _inject(db, test_user, _mock_client())
         client.post(
             "/api/v1/interview-prep/",
             json={

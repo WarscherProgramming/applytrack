@@ -15,10 +15,11 @@ class InterviewPrepRepository(BaseRepository[InterviewPrepPackage]):
         self,
         *,
         application_id: UUID | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[list[InterviewPrepPackage], int]:
-        base = select(InterviewPrepPackage)
+        base = select(InterviewPrepPackage).where(InterviewPrepPackage.user_id == user_id)
         if application_id is not None:
             base = base.where(InterviewPrepPackage.application_id == application_id)
 

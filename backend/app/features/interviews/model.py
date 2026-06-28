@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
 class InterviewType(str, enum.Enum):
@@ -28,7 +29,7 @@ class InterviewStatus(str, enum.Enum):
     NO_SHOW = "no_show"
 
 
-class Interview(BaseModel):
+class Interview(UserOwnedMixin, BaseModel):
     __tablename__ = "interviews"
 
     # Required FK — an interview without an application is meaningless.

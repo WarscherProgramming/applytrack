@@ -6,9 +6,10 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
-class InterviewPrepPackage(BaseModel):
+class InterviewPrepPackage(UserOwnedMixin, BaseModel):
     """
     A stored interview-preparation package (history record).
 

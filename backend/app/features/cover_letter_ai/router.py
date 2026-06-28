@@ -5,6 +5,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.cover_letter_ai.schemas import (
     CoverLetterGenerateRequest,
     CoverLetterGenerateResponse,
@@ -18,8 +19,11 @@ from app.features.cover_letters.schema import CoverLetterResponse
 router = APIRouter(prefix="/cover-letter-ai", tags=["cover_letter_ai"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> CoverLetterAIService:
-    return CoverLetterAIService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> CoverLetterAIService:
+    return CoverLetterAIService(db, user.id)
 
 
 ServiceDep = Annotated[CoverLetterAIService, Depends(_get_service)]

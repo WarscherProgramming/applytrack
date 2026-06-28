@@ -10,6 +10,7 @@ from app.features.interviews.schema import InterviewCreate, InterviewUpdate
 from app.features.interviews.service import InterviewService
 
 _NOW = datetime(2024, 6, 15, 14, 0, 0, tzinfo=timezone.utc)
+USER_ID = uuid4()
 
 
 @pytest.fixture
@@ -34,6 +35,7 @@ def service(
     mock_recruiter_repo: MagicMock,
 ) -> InterviewService:
     svc = InterviewService.__new__(InterviewService)
+    svc.user_id = USER_ID
     svc.repo = mock_repo
     svc.application_repo = mock_application_repo
     svc.recruiter_repo = mock_recruiter_repo
@@ -70,7 +72,7 @@ class TestInterviewServiceCreate:
         mock_application_repo: MagicMock,
     ) -> None:
         application_id = uuid4()
-        mock_application_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
         expected = _make_interview(application_id=application_id)
         mock_repo.create.return_value = expected
 
@@ -78,8 +80,11 @@ class TestInterviewServiceCreate:
             InterviewCreate(application_id=application_id, scheduled_at=_NOW)
         )
 
-        mock_application_repo.get_or_raise.assert_called_once_with(application_id)
+        mock_application_repo.get_or_raise_for_user.assert_called_once_with(
+            application_id, USER_ID
+        )
         mock_repo.create.assert_called_once()
+        assert mock_repo.create.call_args[0][0]["user_id"] == USER_ID
         assert result is expected
 
     def test_raises_not_found_when_application_does_not_exist(
@@ -88,7 +93,7 @@ class TestInterviewServiceCreate:
         mock_application_repo: MagicMock,
         mock_repo: MagicMock,
     ) -> None:
-        mock_application_repo.get_or_raise.side_effect = NotFoundError(
+        mock_application_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "JobApplication", uuid4()
         )
 
@@ -107,8 +112,8 @@ class TestInterviewServiceCreate:
         mock_recruiter_repo: MagicMock,
     ) -> None:
         recruiter_id = uuid4()
-        mock_application_repo.get_or_raise.return_value = MagicMock()
-        mock_recruiter_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
+        mock_recruiter_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.create.return_value = _make_interview(recruiter_id=recruiter_id)
 
         service.create(
@@ -119,7 +124,9 @@ class TestInterviewServiceCreate:
             )
         )
 
-        mock_recruiter_repo.get_or_raise.assert_called_once_with(recruiter_id)
+        mock_recruiter_repo.get_or_raise_for_user.assert_called_once_with(
+            recruiter_id, USER_ID
+        )
 
     def test_raises_not_found_when_recruiter_does_not_exist(
         self,
@@ -128,8 +135,8 @@ class TestInterviewServiceCreate:
         mock_recruiter_repo: MagicMock,
         mock_repo: MagicMock,
     ) -> None:
-        mock_application_repo.get_or_raise.return_value = MagicMock()
-        mock_recruiter_repo.get_or_raise.side_effect = NotFoundError(
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
+        mock_recruiter_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "Recruiter", uuid4()
         )
 
@@ -151,12 +158,12 @@ class TestInterviewServiceCreate:
         mock_application_repo: MagicMock,
         mock_recruiter_repo: MagicMock,
     ) -> None:
-        mock_application_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.create.return_value = _make_interview()
 
         service.create(InterviewCreate(application_id=uuid4(), scheduled_at=_NOW))
 
-        mock_recruiter_repo.get_or_raise.assert_not_called()
+        mock_recruiter_repo.get_or_raise_for_user.assert_not_called()
 
     def test_status_defaults_to_scheduled(
         self,
@@ -164,7 +171,7 @@ class TestInterviewServiceCreate:
         mock_repo: MagicMock,
         mock_application_repo: MagicMock,
     ) -> None:
-        mock_application_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.create.return_value = _make_interview()
 
         service.create(InterviewCreate(application_id=uuid4(), scheduled_at=_NOW))
@@ -178,7 +185,7 @@ class TestInterviewServiceCreate:
         mock_repo: MagicMock,
         mock_application_repo: MagicMock,
     ) -> None:
-        mock_application_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.create.return_value = _make_interview()
 
         service.create(InterviewCreate(application_id=uuid4(), scheduled_at=_NOW))
@@ -198,17 +205,17 @@ class TestInterviewServiceGet:
     ) -> None:
         interview_id = uuid4()
         expected = _make_interview(id=interview_id)
-        mock_repo.get_or_raise.return_value = expected
+        mock_repo.get_or_raise_for_user.return_value = expected
 
         result = service.get(interview_id)
 
-        mock_repo.get_or_raise.assert_called_once_with(interview_id)
+        mock_repo.get_or_raise_for_user.assert_called_once_with(interview_id, USER_ID)
         assert result is expected
 
     def test_propagates_not_found_from_repository(
         self, service: InterviewService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Interview", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Interview", uuid4())
 
         with pytest.raises(NotFoundError):
             service.get(uuid4())
@@ -241,6 +248,7 @@ class TestInterviewServiceList:
             recruiter_id=recruiter_id,
             status=InterviewStatus.COMPLETED,
             interview_type=InterviewType.TECHNICAL,
+            user_id=USER_ID,
             skip=5,
             limit=10,
         )
@@ -272,15 +280,15 @@ class TestInterviewServiceUpdate:
     ) -> None:
         interview = _make_interview(status=InterviewStatus.SCHEDULED.value)
         updated = _make_interview(id=interview.id, status=InterviewStatus.COMPLETED.value)
-        mock_repo.get_or_raise.return_value = interview
+        mock_repo.get_or_raise_for_user.return_value = interview
         mock_repo.update.return_value = updated
 
         result = service.update(
             interview.id, InterviewUpdate(status=InterviewStatus.COMPLETED)
         )
 
-        mock_application_repo.get_or_raise.assert_not_called()
-        mock_recruiter_repo.get_or_raise.assert_not_called()
+        mock_application_repo.get_or_raise_for_user.assert_not_called()
+        mock_recruiter_repo.get_or_raise_for_user.assert_not_called()
         mock_repo.update.assert_called_once_with(
             interview, {"status": InterviewStatus.COMPLETED}
         )
@@ -294,15 +302,17 @@ class TestInterviewServiceUpdate:
     ) -> None:
         interview = _make_interview()
         new_application_id = uuid4()
-        mock_repo.get_or_raise.return_value = interview
-        mock_application_repo.get_or_raise.return_value = MagicMock()
+        mock_repo.get_or_raise_for_user.return_value = interview
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.update.return_value = interview
 
         service.update(
             interview.id, InterviewUpdate(application_id=new_application_id)
         )
 
-        mock_application_repo.get_or_raise.assert_called_once_with(new_application_id)
+        mock_application_repo.get_or_raise_for_user.assert_called_once_with(
+            new_application_id, USER_ID
+        )
 
     def test_validates_recruiter_when_recruiter_id_changes(
         self,
@@ -312,15 +322,17 @@ class TestInterviewServiceUpdate:
     ) -> None:
         interview = _make_interview()
         new_recruiter_id = uuid4()
-        mock_repo.get_or_raise.return_value = interview
-        mock_recruiter_repo.get_or_raise.return_value = MagicMock()
+        mock_repo.get_or_raise_for_user.return_value = interview
+        mock_recruiter_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.update.return_value = interview
 
         service.update(
             interview.id, InterviewUpdate(recruiter_id=new_recruiter_id)
         )
 
-        mock_recruiter_repo.get_or_raise.assert_called_once_with(new_recruiter_id)
+        mock_recruiter_repo.get_or_raise_for_user.assert_called_once_with(
+            new_recruiter_id, USER_ID
+        )
 
     def test_allows_detaching_recruiter_by_sending_null(
         self,
@@ -329,12 +341,12 @@ class TestInterviewServiceUpdate:
         mock_recruiter_repo: MagicMock,
     ) -> None:
         interview = _make_interview(recruiter_id=uuid4())
-        mock_repo.get_or_raise.return_value = interview
+        mock_repo.get_or_raise_for_user.return_value = interview
         mock_repo.update.return_value = interview
 
         service.update(interview.id, InterviewUpdate(recruiter_id=None))
 
-        mock_recruiter_repo.get_or_raise.assert_not_called()
+        mock_recruiter_repo.get_or_raise_for_user.assert_not_called()
 
     def test_raises_not_found_when_new_application_does_not_exist(
         self,
@@ -343,8 +355,8 @@ class TestInterviewServiceUpdate:
         mock_application_repo: MagicMock,
     ) -> None:
         interview = _make_interview()
-        mock_repo.get_or_raise.return_value = interview
-        mock_application_repo.get_or_raise.side_effect = NotFoundError(
+        mock_repo.get_or_raise_for_user.return_value = interview
+        mock_application_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "JobApplication", uuid4()
         )
 
@@ -358,8 +370,8 @@ class TestInterviewServiceUpdate:
         mock_recruiter_repo: MagicMock,
     ) -> None:
         interview = _make_interview()
-        mock_repo.get_or_raise.return_value = interview
-        mock_recruiter_repo.get_or_raise.side_effect = NotFoundError(
+        mock_repo.get_or_raise_for_user.return_value = interview
+        mock_recruiter_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "Recruiter", uuid4()
         )
 
@@ -369,7 +381,7 @@ class TestInterviewServiceUpdate:
     def test_propagates_not_found_when_interview_does_not_exist(
         self, service: InterviewService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Interview", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Interview", uuid4())
 
         with pytest.raises(NotFoundError):
             service.update(uuid4(), InterviewUpdate(status=InterviewStatus.COMPLETED))
@@ -385,7 +397,7 @@ class TestInterviewServiceDelete:
         self, service: InterviewService, mock_repo: MagicMock
     ) -> None:
         interview = _make_interview()
-        mock_repo.get_or_raise.return_value = interview
+        mock_repo.get_or_raise_for_user.return_value = interview
 
         service.delete(interview.id)
 
@@ -394,7 +406,7 @@ class TestInterviewServiceDelete:
     def test_propagates_not_found_from_repository(
         self, service: InterviewService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Interview", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Interview", uuid4())
 
         with pytest.raises(NotFoundError):
             service.delete(uuid4())

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.companies.model import Company
 from app.features.companies.schema import (
     CompanyCreate,
@@ -17,8 +18,11 @@ from app.features.companies.service import CompanyService
 router = APIRouter(prefix="/companies", tags=["companies"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> CompanyService:
-    return CompanyService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> CompanyService:
+    return CompanyService(db, user.id)
 
 
 # Type alias keeps route signatures terse and readable.

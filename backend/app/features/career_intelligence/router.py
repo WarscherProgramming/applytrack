@@ -4,14 +4,18 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.career_intelligence.schemas import CareerIntelligenceResponse
 from app.features.career_intelligence.service import CareerIntelligenceService
 
 router = APIRouter(prefix="/career-intelligence", tags=["career_intelligence"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> CareerIntelligenceService:
-    return CareerIntelligenceService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> CareerIntelligenceService:
+    return CareerIntelligenceService(db, user.id)
 
 
 ServiceDep = Annotated[CareerIntelligenceService, Depends(_get_service)]

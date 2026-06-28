@@ -14,8 +14,8 @@ class RecruiterRepository(BaseRepository[Recruiter]):
     def __init__(self, db: Session) -> None:
         super().__init__(Recruiter, db)
 
-    def get_by_email(self, email: str) -> Recruiter | None:
-        stmt = select(Recruiter).where(Recruiter.email == email)
+    def get_by_email(self, email: str, user_id: UUID) -> Recruiter | None:
+        stmt = select(Recruiter).where(Recruiter.email == email, Recruiter.user_id == user_id)
         return self.db.scalars(stmt).first()
 
     def list_paginated(
@@ -23,10 +23,11 @@ class RecruiterRepository(BaseRepository[Recruiter]):
         *,
         query: str | None = None,
         company_id: UUID | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[Recruiter], int]:
-        base = select(Recruiter)
+        base = select(Recruiter).where(Recruiter.user_id == user_id)
 
         if query:
             pattern = f"%{query}%"

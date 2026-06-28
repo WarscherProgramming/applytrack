@@ -6,6 +6,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.tasks.model import Task, TaskPriority, TaskSource, TaskStatus
 from app.features.tasks.schemas import (
     TaskCreate,
@@ -19,8 +20,11 @@ from app.features.tasks.service import TaskService
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> TaskService:
-    return TaskService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> TaskService:
+    return TaskService(db, user.id)
 
 
 ServiceDep = Annotated[TaskService, Depends(_get_service)]

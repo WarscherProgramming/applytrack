@@ -19,6 +19,7 @@ from app.features.opportunity_discovery.schemas import (
 )
 from app.features.opportunity_discovery.service import OpportunityDiscoveryService
 from app.features.resumes.service import ResumeService
+from app.features.users.model import User
 from app.main import app
 
 
@@ -63,16 +64,22 @@ def _mock_client(response: str | None = None) -> AIClient:
     return AIClient(MockProvider(default_response=payload), default_model="mock-model")
 
 
-def _inject_service(db: Session, client: AIClient | None = None) -> None:
+def _inject_service(db: Session, user: User, client: AIClient | None = None) -> None:
     app.dependency_overrides[_get_service] = lambda: OpportunityDiscoveryService(
         db,
+        user.id,
         providers={JobProviderName.GREENHOUSE: FakeProvider()},
         ai_client=client or _mock_client(),
     )
 
 
-def _seed_documents_and_history(db: Session):
-    company = Company(name="Acme Health", industry="Healthcare", location="Remote")
+def _seed_documents_and_history(db: Session, user: User):
+    company = Company(
+        name="Acme Health",
+        industry="Healthcare",
+        location="Remote",
+        user_id=user.id,
+    )
     db.add(company)
     db.flush()
     db.add(
@@ -80,14 +87,15 @@ def _seed_documents_and_history(db: Session):
             company_id=company.id,
             job_title="Backend Engineer",
             status=ApplicationStatus.INTERVIEW.value,
+            user_id=user.id,
         )
     )
-    resume = ResumeService(db).upload(
+    resume = ResumeService(db, user.id).upload(
         file_name="resume.txt",
         content=b"Python backend engineer with FastAPI, PostgreSQL, Docker, and AWS.",
         name="Backend Resume",
     )
-    cover_letter = CoverLetterService(db).upload(
+    cover_letter = CoverLetterService(db, user.id).upload(
         file_name="cover.txt",
         content=b"Dear Acme Health, I am excited about backend platform work.",
         name="Acme Backend Cover",
@@ -97,10 +105,10 @@ def _seed_documents_and_history(db: Session):
 
 
 def test_search_scores_provider_jobs_and_ai_explains(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    resume, cover_letter = _seed_documents_and_history(db)
-    _inject_service(db)
+    resume, cover_letter = _seed_documents_and_history(db, test_user)
+    _inject_service(db, test_user)
 
     response = client.post(
         "/api/v1/opportunity-discovery/search",
@@ -129,10 +137,10 @@ def test_search_scores_provider_jobs_and_ai_explains(
 
 
 def test_save_opportunity_creates_draft_application(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    resume, cover_letter = _seed_documents_and_history(db)
-    _inject_service(db)
+    resume, cover_letter = _seed_documents_and_history(db, test_user)
+    _inject_service(db, test_user)
     search = client.post(
         "/api/v1/opportunity-discovery/search",
         json={"greenhouse_boards": ["fake-board"]},
@@ -157,10 +165,10 @@ def test_save_opportunity_creates_draft_application(
 
 
 def test_ai_failure_returns_deterministic_explanation(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_documents_and_history(db)
-    _inject_service(db, _mock_client(response="not json"))
+    _seed_documents_and_history(db, test_user)
+    _inject_service(db, test_user, _mock_client(response="not json"))
 
     response = client.post(
         "/api/v1/opportunity-discovery/search",

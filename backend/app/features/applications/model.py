@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
 class ApplicationStatus(str, enum.Enum):
@@ -23,7 +24,7 @@ class ApplicationStatus(str, enum.Enum):
     GHOSTED = "ghosted"
 
 
-class JobApplication(BaseModel):
+class JobApplication(UserOwnedMixin, BaseModel):
     __tablename__ = "job_applications"
 
     company_id: Mapped[uuid.UUID] = mapped_column(

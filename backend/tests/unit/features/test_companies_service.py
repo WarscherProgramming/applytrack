@@ -8,6 +8,8 @@ from app.features.companies.model import Company
 from app.features.companies.schema import CompanyCreate, CompanyUpdate
 from app.features.companies.service import CompanyService
 
+USER_ID = uuid4()
+
 
 @pytest.fixture
 def mock_repo() -> MagicMock:
@@ -18,6 +20,7 @@ def mock_repo() -> MagicMock:
 def service(mock_repo: MagicMock) -> CompanyService:
     # Bypass __init__ so we can inject the mock repository directly.
     svc = CompanyService.__new__(CompanyService)
+    svc.user_id = USER_ID
     svc.repo = mock_repo
     return svc
 
@@ -32,8 +35,9 @@ class TestCompanyServiceCreate:
 
         result = service.create(CompanyCreate(name="Stripe"))
 
-        mock_repo.get_by_name.assert_called_once_with("Stripe")
+        mock_repo.get_by_name.assert_called_once_with("Stripe", USER_ID)
         mock_repo.create.assert_called_once()
+        assert mock_repo.create.call_args[0][0]["user_id"] == USER_ID
         assert result is expected
 
     def test_raises_conflict_when_name_already_exists(
@@ -53,17 +57,17 @@ class TestCompanyServiceGet:
     ) -> None:
         company_id = uuid4()
         expected = Company(id=company_id, name="Stripe")
-        mock_repo.get_or_raise.return_value = expected
+        mock_repo.get_or_raise_for_user.return_value = expected
 
         result = service.get(company_id)
 
-        mock_repo.get_or_raise.assert_called_once_with(company_id)
+        mock_repo.get_or_raise_for_user.assert_called_once_with(company_id, USER_ID)
         assert result is expected
 
     def test_propagates_not_found_from_repository(
         self, service: CompanyService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Company", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Company", uuid4())
 
         with pytest.raises(NotFoundError):
             service.get(uuid4())
@@ -76,7 +80,7 @@ class TestCompanyServiceUpdate:
         company_id = uuid4()
         company = Company(id=company_id, name="Stripe")
         updated = Company(id=company_id, name="Stripe", location="NYC")
-        mock_repo.get_or_raise.return_value = company
+        mock_repo.get_or_raise_for_user.return_value = company
         mock_repo.update.return_value = updated
 
         result = service.update(company_id, CompanyUpdate(location="NYC"))
@@ -90,7 +94,7 @@ class TestCompanyServiceUpdate:
     ) -> None:
         company_id = uuid4()
         company = Company(id=company_id, name="Stripe")
-        mock_repo.get_or_raise.return_value = company
+        mock_repo.get_or_raise_for_user.return_value = company
         mock_repo.get_by_name.return_value = Company(id=uuid4(), name="Anthropic")
 
         with pytest.raises(ConflictError):
@@ -103,7 +107,7 @@ class TestCompanyServiceUpdate:
     ) -> None:
         company_id = uuid4()
         company = Company(id=company_id, name="Stripe")
-        mock_repo.get_or_raise.return_value = company
+        mock_repo.get_or_raise_for_user.return_value = company
         mock_repo.update.return_value = company
 
         service.update(company_id, CompanyUpdate(name="Stripe"))
@@ -114,7 +118,7 @@ class TestCompanyServiceUpdate:
     def test_propagates_not_found_from_repository(
         self, service: CompanyService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Company", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Company", uuid4())
 
         with pytest.raises(NotFoundError):
             service.update(uuid4(), CompanyUpdate(location="NYC"))
@@ -125,7 +129,7 @@ class TestCompanyServiceDelete:
         self, service: CompanyService, mock_repo: MagicMock
     ) -> None:
         company = Company(id=uuid4(), name="Stripe")
-        mock_repo.get_or_raise.return_value = company
+        mock_repo.get_or_raise_for_user.return_value = company
 
         service.delete(company.id)
 
@@ -134,7 +138,7 @@ class TestCompanyServiceDelete:
     def test_propagates_not_found_from_repository(
         self, service: CompanyService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("Company", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("Company", uuid4())
 
         with pytest.raises(NotFoundError):
             service.delete(uuid4())

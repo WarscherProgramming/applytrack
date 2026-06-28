@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.calendar_integration.model import CalendarProvider
 from app.features.calendar_integration.schemas import (
     CalendarCallbackResponse,
@@ -20,8 +21,11 @@ from app.features.calendar_integration.service import CalendarIntegrationService
 router = APIRouter(prefix="/calendar-integration", tags=["calendar_integration"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> CalendarIntegrationService:
-    return CalendarIntegrationService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> CalendarIntegrationService:
+    return CalendarIntegrationService(db, user.id)
 
 
 ServiceDep = Annotated[CalendarIntegrationService, Depends(_get_service)]

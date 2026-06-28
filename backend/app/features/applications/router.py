@@ -14,12 +14,16 @@ from app.features.applications.schema import (
     ApplicationUpdate,
 )
 from app.features.applications.service import ApplicationService
+from app.features.auth.dependencies import CurrentUser
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> ApplicationService:
-    return ApplicationService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> ApplicationService:
+    return ApplicationService(db, user.id)
 
 
 ServiceDep = Annotated[ApplicationService, Depends(_get_service)]

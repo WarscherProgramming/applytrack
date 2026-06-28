@@ -13,6 +13,7 @@ from app.features.resume_match.router import _get_service
 from app.features.resume_match.schema import ResumeMatchCreate
 from app.features.resume_match.service import ResumeMatchService
 from app.features.resumes.service import ResumeService
+from app.features.users.model import User
 from app.main import app
 
 # A valid ResumeMatchResult the mock provider returns for every call.
@@ -40,27 +41,29 @@ def _mock_client(response: str = _RESULT_JSON) -> AIClient:
     )
 
 
-def _create_resume(db: Session, *, content: bytes = b"Experienced Python engineer.") -> str:
-    resume = ResumeService(db).upload(
+def _create_resume(
+    db: Session, user: User, *, content: bytes = b"Experienced Python engineer."
+) -> str:
+    resume = ResumeService(db, user.id).upload(
         file_name="resume.txt", content=content, name="My Resume"
     )
     return str(resume.id)
 
 
-def _inject_client(db: Session, ai_client: AIClient) -> None:
+def _inject_client(db: Session, user: User, ai_client: AIClient) -> None:
     """Override the API's service dependency with a controlled AI client.
 
     Cleared automatically by the `client` fixture's dependency_overrides.clear().
     """
     app.dependency_overrides[_get_service] = lambda: ResumeMatchService(
-        db, ai_client=ai_client
+        db, user.id, ai_client=ai_client
     )
 
 
 class TestServiceDirect:
-    def test_runs_and_persists_analysis(self, db: Session) -> None:
-        resume_id = _create_resume(db)
-        service = ResumeMatchService(db, ai_client=_mock_client())
+    def test_runs_and_persists_analysis(self, db: Session, test_user: User) -> None:
+        resume_id = _create_resume(db, test_user)
+        service = ResumeMatchService(db, test_user.id, ai_client=_mock_client())
 
         analysis = service.create(
             ResumeMatchCreate(resume_id=resume_id, job_description=_JOB_DESCRIPTION)
@@ -71,9 +74,9 @@ class TestServiceDirect:
         assert analysis.provider == "mock"
         assert analysis.result["missing_skills"] == ["Kubernetes", "Terraform"]
 
-    def test_tracks_ai_usage(self, db: Session) -> None:
-        resume_id = _create_resume(db)
-        ResumeMatchService(db, ai_client=_mock_client()).create(
+    def test_tracks_ai_usage(self, db: Session, test_user: User) -> None:
+        resume_id = _create_resume(db, test_user)
+        ResumeMatchService(db, test_user.id, ai_client=_mock_client()).create(
             ResumeMatchCreate(resume_id=resume_id, job_description=_JOB_DESCRIPTION)
         )
 
@@ -82,11 +85,13 @@ class TestServiceDirect:
         assert usage[0].feature == "resume_match"
         assert usage[0].success is True
 
-    def test_unsupported_resume_format_raises(self, db: Session) -> None:
-        resume = ResumeService(db).upload(
+    def test_unsupported_resume_format_raises(
+        self, db: Session, test_user: User
+    ) -> None:
+        resume = ResumeService(db, test_user.id).upload(
             file_name="resume.doc", content=b"\xd0\xcf binary", name="Legacy"
         )
-        service = ResumeMatchService(db, ai_client=_mock_client())
+        service = ResumeMatchService(db, test_user.id, ai_client=_mock_client())
         from app.features.resume_match.text_extraction import ResumeTextExtractionError
 
         with pytest.raises(ResumeTextExtractionError):
@@ -99,10 +104,10 @@ class TestServiceDirect:
 
 class TestRunAnalysisApi:
     def test_returns_201_with_full_result(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
-        resume_id = _create_resume(db)
-        _inject_client(db, _mock_client())
+        resume_id = _create_resume(db, test_user)
+        _inject_client(db, test_user, _mock_client())
 
         response = client.post(
             "/api/v1/resume-match/",
@@ -117,11 +122,11 @@ class TestRunAnalysisApi:
         assert body["provider"] == "mock"
 
     def test_simulation_works_without_injection(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
         # No injected client: the service falls back to mock simulation (no API
         # key in tests), proving the default local-dev path works end to end.
-        resume_id = _create_resume(db)
+        resume_id = _create_resume(db, test_user)
         response = client.post(
             "/api/v1/resume-match/",
             json={"resume_id": resume_id, "job_description": _JOB_DESCRIPTION},
@@ -143,9 +148,9 @@ class TestRunAnalysisApi:
         assert response.status_code == 404
 
     def test_422_for_short_job_description(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
-        resume_id = _create_resume(db)
+        resume_id = _create_resume(db, test_user)
         response = client.post(
             "/api/v1/resume-match/",
             json={"resume_id": resume_id, "job_description": "too short"},
@@ -153,10 +158,10 @@ class TestRunAnalysisApi:
         assert response.status_code == 422
 
     def test_invalid_ai_json_returns_502(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
-        resume_id = _create_resume(db)
-        _inject_client(db, _mock_client(response="this is not json"))
+        resume_id = _create_resume(db, test_user)
+        _inject_client(db, test_user, _mock_client(response="this is not json"))
 
         response = client.post(
             "/api/v1/resume-match/",
@@ -167,9 +172,11 @@ class TestRunAnalysisApi:
 
 
 class TestHistoryApi:
-    def test_list_and_reopen(self, client: TestClient, db: Session) -> None:
-        resume_id = _create_resume(db)
-        _inject_client(db, _mock_client())
+    def test_list_and_reopen(
+        self, client: TestClient, db: Session, test_user: User
+    ) -> None:
+        resume_id = _create_resume(db, test_user)
+        _inject_client(db, test_user, _mock_client())
 
         created = client.post(
             "/api/v1/resume-match/",
@@ -188,9 +195,11 @@ class TestHistoryApi:
         assert reopened["id"] == created["id"]
         assert reopened["result"]["missing_skills"] == ["Kubernetes", "Terraform"]
 
-    def test_filter_by_resume(self, client: TestClient, db: Session) -> None:
-        resume_id = _create_resume(db)
-        _inject_client(db, _mock_client())
+    def test_filter_by_resume(
+        self, client: TestClient, db: Session, test_user: User
+    ) -> None:
+        resume_id = _create_resume(db, test_user)
+        _inject_client(db, test_user, _mock_client())
         client.post(
             "/api/v1/resume-match/",
             json={"resume_id": resume_id, "job_description": _JOB_DESCRIPTION},
@@ -199,9 +208,9 @@ class TestHistoryApi:
         filtered = client.get(f"/api/v1/resume-match/?resume_id={other}").json()
         assert filtered["total"] == 0
 
-    def test_delete(self, client: TestClient, db: Session) -> None:
-        resume_id = _create_resume(db)
-        _inject_client(db, _mock_client())
+    def test_delete(self, client: TestClient, db: Session, test_user: User) -> None:
+        resume_id = _create_resume(db, test_user)
+        _inject_client(db, test_user, _mock_client())
         created = client.post(
             "/api/v1/resume-match/",
             json={"resume_id": resume_id, "job_description": _JOB_DESCRIPTION},

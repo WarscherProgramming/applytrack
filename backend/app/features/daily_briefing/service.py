@@ -54,9 +54,10 @@ PRIORITY_ORDER = {
 class DailyBriefingService:
     """Builds the proactive briefing and owns notification lifecycle actions."""
 
-    def __init__(self, db: Session, *, ai_client: AIClient | None = None) -> None:
+    def __init__(self, db: Session, user_id: UUID, *, ai_client: AIClient | None = None) -> None:
         self.db = db
-        self.repo = DailyBriefingRepository(db)
+        self.user_id = user_id
+        self.repo = DailyBriefingRepository(db, user_id)
         self._injected_client = ai_client
 
     def build_briefing(self) -> DailyBriefingResponse:
@@ -64,9 +65,9 @@ class DailyBriefingService:
         today = now.date()
         since = now - timedelta(days=1)
 
-        copilot = CareerCopilotService(self.db).build_daily_briefing()
-        career = CareerIntelligenceService(self.db).build_dashboard()
-        job_intelligence = JobIntelligenceService(self.db).build_report()
+        copilot = CareerCopilotService(self.db, self.user_id).build_daily_briefing()
+        career = CareerIntelligenceService(self.db, self.user_id).build_dashboard()
+        job_intelligence = JobIntelligenceService(self.db, self.user_id).build_report()
 
         applications = self.repo.list_applications()
         companies = self.repo.list_companies()
@@ -445,6 +446,7 @@ class DailyBriefingService:
                 DailyBriefingAIResult,
                 db=self.db,
                 feature=FEATURE,
+                user_id=self.user_id,
             )
             result = structured.data
             return DailyBriefingAI(

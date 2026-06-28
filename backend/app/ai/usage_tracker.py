@@ -1,7 +1,9 @@
 import logging
 from decimal import ROUND_HALF_UP, Decimal
+from uuid import UUID
 
-from sqlalchemy import Boolean, Integer, Numeric, String
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.ai.schemas import TokenUsage
@@ -20,6 +22,12 @@ class AIUsageRecord(BaseModel):
 
     __tablename__ = "ai_usage_records"
 
+    user_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     provider: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     model: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     # The feature that made the call (e.g. "resume_match"). Nullable: the
@@ -77,9 +85,11 @@ class UsageTracker:
         latency_ms: int,
         success: bool,
         feature: str | None = None,
+        user_id: UUID | None = None,
         estimated_cost_usd: Decimal | None = None,
     ) -> AIUsageRecord:
         entry = AIUsageRecord(
+            user_id=user_id,
             provider=provider,
             model=model,
             feature=feature,

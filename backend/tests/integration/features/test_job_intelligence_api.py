@@ -12,6 +12,7 @@ from app.features.job_intelligence.router import _get_service
 from app.features.job_intelligence.service import JobIntelligenceService
 from app.features.resume_match.model import ResumeMatchAnalysis
 from app.features.resumes.service import ResumeService
+from app.features.users.model import User
 from app.main import app
 
 
@@ -30,17 +31,22 @@ def _mock_client(response: str | None = None) -> AIClient:
     return AIClient(MockProvider(default_response=payload), default_model="mock-model")
 
 
-def _inject_client(db: Session, client: AIClient | None = None) -> None:
+def _inject_client(db: Session, user: User, client: AIClient | None = None) -> None:
     app.dependency_overrides[_get_service] = lambda: JobIntelligenceService(
-        db, ai_client=client or _mock_client()
+        db, user.id, ai_client=client or _mock_client()
     )
 
 
-def _seed_data(db: Session) -> None:
-    company = Company(name="Acme Health", industry="Healthcare", location="Remote")
+def _seed_data(db: Session, user: User) -> None:
+    company = Company(
+        name="Acme Health",
+        industry="Healthcare",
+        location="Remote",
+        user_id=user.id,
+    )
     db.add(company)
     db.flush()
-    resume = ResumeService(db).upload(
+    resume = ResumeService(db, user.id).upload(
         file_name="resume.txt",
         content=b"Python backend engineer with Docker and REST API experience.",
         name="Backend Resume",
@@ -50,6 +56,7 @@ def _seed_data(db: Session) -> None:
         job_title="Backend Platform Engineer",
         status=ApplicationStatus.INTERVIEW.value,
         resume_id=resume.id,
+        user_id=user.id,
     )
     db.add(application)
     db.flush()
@@ -65,6 +72,7 @@ def _seed_data(db: Session) -> None:
             result={"missing_skills": ["Kubernetes", "Terraform"]},
             provider="mock",
             model="mock-model",
+            user_id=user.id,
         )
     )
     db.add(
@@ -81,6 +89,7 @@ def _seed_data(db: Session) -> None:
             result={},
             provider="mock",
             model="mock-model",
+            user_id=user.id,
         )
     )
     db.flush()
@@ -101,10 +110,10 @@ def test_extraction_and_normalization_helpers() -> None:
 
 
 def test_report_calculates_market_signals_and_gaps(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_data(db)
-    _inject_client(db)
+    _seed_data(db, test_user)
+    _inject_client(db, test_user)
 
     response = client.get("/api/v1/job-intelligence/")
 
@@ -125,9 +134,11 @@ def test_report_calculates_market_signals_and_gaps(
     ]
 
 
-def test_filters_by_industry_and_role(client: TestClient, db: Session) -> None:
-    _seed_data(db)
-    _inject_client(db)
+def test_filters_by_industry_and_role(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    _seed_data(db, test_user)
+    _inject_client(db, test_user)
 
     healthcare = client.get("/api/v1/job-intelligence/?industry=Healthcare").json()
     finance = client.get("/api/v1/job-intelligence/?industry=Finance").json()
@@ -139,10 +150,10 @@ def test_filters_by_industry_and_role(client: TestClient, db: Session) -> None:
 
 
 def test_ai_failure_returns_deterministic_interpretation(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_data(db)
-    _inject_client(db, _mock_client(response="not json"))
+    _seed_data(db, test_user)
+    _inject_client(db, test_user, _mock_client(response="not json"))
 
     response = client.get("/api/v1/job-intelligence/")
 

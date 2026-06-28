@@ -46,18 +46,19 @@ def _domain_from_website(website: str | None) -> str | None:
 
 
 class GmailService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, user_id: UUID) -> None:
         self.db = db
+        self.user_id = user_id
         self.accounts = GmailAccountRepository(db)
         self.emails = EmailMessageRepository(db)
 
     # -- Status ------------------------------------------------------------
 
     def get_status(self) -> dict:
-        account = self.accounts.get_account()
+        account = self.accounts.get_account(self.user_id)
         email_count = 0
         if account:
-            email_count = len(self.emails.all_for_account(account.id))
+            email_count = len(self.emails.all_for_account(account.id, self.user_id))
         return {
             "connected": account is not None,
             "email_address": account.email_address if account else None,
@@ -73,11 +74,12 @@ class GmailService:
         """In simulation mode, immediately establish a connected account. In
         real mode, return the Google consent URL (account is created on callback)."""
         if settings.gmail_simulation:
-            account = self.accounts.get_account()
+            account = self.accounts.get_account(self.user_id)
             if account is None:
                 client = get_gmail_client(None)
                 account = self.accounts.create(
                     {
+                        "user_id": self.user_id,
                         "email_address": client.fetch_profile_email(),
                         "status": "connected",
                     }
@@ -108,13 +110,14 @@ class GmailService:
             "access_token_encrypted": encrypt_token(tokens.access_token),
             "token_expires_at": tokens.expires_at,
         }
-        existing = self.accounts.get_account()
+        data["user_id"] = self.user_id
+        existing = self.accounts.get_account(self.user_id)
         if existing:
             return self.accounts.update(existing, data)
         return self.accounts.create(data)
 
     def disconnect(self) -> None:
-        account = self.accounts.get_account()
+        account = self.accounts.get_account(self.user_id)
         if account:
             # Emails cascade-delete via the FK.
             self.accounts.delete(account)
@@ -122,7 +125,7 @@ class GmailService:
     # -- Sync --------------------------------------------------------------
 
     def sync(self, *, max_results: int = 50) -> dict:
-        account = self.accounts.get_account()
+        account = self.accounts.get_account(self.user_id)
         if account is None:
             raise ValidationError("Gmail is not connected. Connect an account first.")
 
@@ -164,7 +167,7 @@ class GmailService:
             if fields["company_id"] or fields["recruiter_id"]:
                 matched += 1
             existing = self.emails.get_by_message_id(account.id, raw.message_id)
-            payload = {**_raw_to_columns(raw, account.id), **fields}
+            payload = {**_raw_to_columns(raw, account.id, self.user_id), **fields}
             if existing:
                 self.emails.update(existing, payload)
                 updated += 1
@@ -235,10 +238,18 @@ class GmailService:
                     fields["match_reason"] = f"{winner['match_reason']} (thread)"
 
     def _build_match_context(self) -> MatchContext:
-        companies = self.db.scalars(select(Company)).all()
-        recruiters = self.db.scalars(select(Recruiter)).all()
-        applications = self.db.scalars(select(JobApplication)).all()
-        interviews = self.db.scalars(select(Interview)).all()
+        companies = self.db.scalars(
+            select(Company).where(Company.user_id == self.user_id)
+        ).all()
+        recruiters = self.db.scalars(
+            select(Recruiter).where(Recruiter.user_id == self.user_id)
+        ).all()
+        applications = self.db.scalars(
+            select(JobApplication).where(JobApplication.user_id == self.user_id)
+        ).all()
+        interviews = self.db.scalars(
+            select(Interview).where(Interview.user_id == self.user_id)
+        ).all()
         return MatchContext(
             companies=tuple(
                 CompanyRef(c.id, c.name, _domain_from_website(c.website))
@@ -258,11 +269,16 @@ class GmailService:
     # -- Reads -------------------------------------------------------------
 
     def list_emails(self, **filters) -> tuple[list[EmailMessage], int]:
-        return self.emails.list_filtered(**filters)
+        return self.emails.list_filtered(**filters, user_id=self.user_id)
 
     def get_timeline(self, application_id: UUID) -> list[dict]:
         """A unified chronological timeline for one application."""
-        application = self.db.get(JobApplication, application_id)
+        application = self.db.scalars(
+            select(JobApplication).where(
+                JobApplication.id == application_id,
+                JobApplication.user_id == self.user_id,
+            )
+        ).first()
         if application is None:
             return []
 
@@ -277,7 +293,10 @@ class GmailService:
         ]
 
         interviews = self.db.scalars(
-            select(Interview).where(Interview.application_id == application_id)
+            select(Interview).where(
+                Interview.application_id == application_id,
+                Interview.user_id == self.user_id,
+            )
         ).all()
         for interview in interviews:
             events.append(
@@ -291,7 +310,7 @@ class GmailService:
             )
 
         emails, _ = self.emails.list_filtered(
-            application_id=application_id, limit=200
+            application_id=application_id, user_id=self.user_id, limit=200
         )
         for email in emails:
             events.append(
@@ -317,8 +336,9 @@ def _email_kind(subject: str | None) -> str:
     return "email"
 
 
-def _raw_to_columns(raw: RawEmail, account_id: UUID) -> dict:
+def _raw_to_columns(raw: RawEmail, account_id: UUID, user_id: UUID) -> dict:
     return {
+        "user_id": user_id,
         "account_id": account_id,
         "message_id": raw.message_id,
         "thread_id": raw.thread_id,

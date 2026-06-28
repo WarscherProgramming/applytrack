@@ -15,6 +15,7 @@ from app.features.gmail.models import EmailMessage, GmailAccount
 from app.features.interviews.model import Interview
 from app.features.resume_match.model import ResumeMatchAnalysis
 from app.features.resumes.model import Resume
+from app.features.users.model import User
 from app.main import app
 
 
@@ -35,15 +36,22 @@ def _mock_client() -> AIClient:
     )
 
 
-def _inject_client(db: Session) -> None:
+def _inject_client(db: Session, user: User) -> None:
     app.dependency_overrides[_get_service] = lambda: CareerIntelligenceService(
-        db, ai_client=_mock_client()
+        db, user.id, ai_client=_mock_client()
     )
 
 
-def _seed_history(db: Session) -> None:
-    acme = Company(name="Acme Health", industry="Healthcare", location="Remote")
-    cloud = Company(name="CloudWorks", industry="SaaS", location="Denver")
+def _seed_history(db: Session, user: User) -> None:
+    acme = Company(
+        name="Acme Health",
+        industry="Healthcare",
+        location="Remote",
+        user_id=user.id,
+    )
+    cloud = Company(
+        name="CloudWorks", industry="SaaS", location="Denver", user_id=user.id
+    )
     db.add_all([acme, cloud])
     db.flush()
 
@@ -52,12 +60,14 @@ def _seed_history(db: Session) -> None:
         file_name="resume.txt",
         storage_path="resumes/1.txt",
         version=1,
+        user_id=user.id,
     )
     cover = CoverLetter(
         name="Backend Cover Letter",
         file_name="cover.md",
         storage_path="cover_letters/1.md",
         version=1,
+        user_id=user.id,
     )
     db.add_all([resume, cover])
     db.flush()
@@ -70,6 +80,7 @@ def _seed_history(db: Session) -> None:
         location="Remote",
         resume_id=resume.id,
         cover_letter_id=cover.id,
+        user_id=user.id,
     )
     app_two = JobApplication(
         company_id=cloud.id,
@@ -77,11 +88,14 @@ def _seed_history(db: Session) -> None:
         status=ApplicationStatus.GHOSTED.value,
         date_applied=date(2026, 1, 10),
         location="Denver",
+        user_id=user.id,
     )
     db.add_all([app_one, app_two])
     db.flush()
 
-    account = GmailAccount(email_address="jobseeker@example.com", status="connected")
+    account = GmailAccount(
+        email_address="jobseeker@example.com", status="connected", user_id=user.id
+    )
     db.add(account)
     db.flush()
     db.add(
@@ -99,6 +113,7 @@ def _seed_history(db: Session) -> None:
             application_id=app_one.id,
             company_id=acme.id,
             match_confidence=0.9,
+            user_id=user.id,
         )
     )
     db.add(
@@ -109,6 +124,7 @@ def _seed_history(db: Session) -> None:
             duration_minutes=45,
             status="completed",
             notes="System design and API discussion",
+            user_id=user.id,
         )
     )
     db.add(
@@ -126,14 +142,17 @@ def _seed_history(db: Session) -> None:
             },
             provider="mock",
             model="mock-model",
+            user_id=user.id,
         )
     )
     db.flush()
 
 
-def test_dashboard_calculates_core_metrics(client: TestClient, db: Session) -> None:
-    _seed_history(db)
-    _inject_client(db)
+def test_dashboard_calculates_core_metrics(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    _seed_history(db, test_user)
+    _inject_client(db, test_user)
 
     response = client.get("/api/v1/career-intelligence/")
 
@@ -154,9 +173,11 @@ def test_dashboard_calculates_core_metrics(client: TestClient, db: Session) -> N
     assert body["ai_recommendations"]["recommendations"][0]["title"] == "Emphasize Kubernetes"
 
 
-def test_date_filter_and_comparison(client: TestClient, db: Session) -> None:
-    _seed_history(db)
-    _inject_client(db)
+def test_date_filter_and_comparison(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    _seed_history(db, test_user)
+    _inject_client(db, test_user)
 
     response = client.get(
         "/api/v1/career-intelligence/"

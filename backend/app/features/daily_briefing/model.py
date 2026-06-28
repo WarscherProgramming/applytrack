@@ -1,9 +1,10 @@
 from enum import StrEnum
 
-from sqlalchemy import Boolean, String, Text
+from sqlalchemy import Boolean, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
 class NotificationPriority(StrEnum):
@@ -21,8 +22,11 @@ class NotificationCategory(StrEnum):
     AI_INSIGHT = "ai_insight"
 
 
-class Notification(BaseModel):
+class Notification(UserOwnedMixin, BaseModel):
     __tablename__ = "notifications"
+    __table_args__ = (
+        UniqueConstraint("user_id", "dedupe_key", name="uq_notifications_user_dedupe"),
+    )
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
@@ -31,7 +35,7 @@ class Notification(BaseModel):
     source_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     source_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     action_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    dedupe_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    dedupe_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     is_dismissed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)

@@ -4,14 +4,18 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.career_copilot.schemas import CareerCopilotResponse
 from app.features.career_copilot.service import CareerCopilotService
 
 router = APIRouter(prefix="/career-copilot", tags=["career_copilot"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> CareerCopilotService:
-    return CareerCopilotService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> CareerCopilotService:
+    return CareerCopilotService(db, user.id)
 
 
 ServiceDep = Annotated[CareerCopilotService, Depends(_get_service)]

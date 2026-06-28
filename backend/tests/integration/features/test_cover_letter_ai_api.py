@@ -19,6 +19,7 @@ from app.features.cover_letter_ai.schemas import (
 from app.features.cover_letter_ai.service import CoverLetterAIService
 from app.features.cover_letters.service import CoverLetterService
 from app.features.resumes.service import ResumeService
+from app.features.users.model import User
 from app.main import app
 
 _GEN_JSON = json.dumps(
@@ -40,31 +41,39 @@ def _mock_client(response: str = _GEN_JSON) -> AIClient:
     )
 
 
-def _create_resume(db: Session, *, content: bytes = b"Python engineer, 6 years.") -> str:
-    resume = ResumeService(db).upload(
+def _create_resume(
+    db: Session, user: User, *, content: bytes = b"Python engineer, 6 years."
+) -> str:
+    resume = ResumeService(db, user.id).upload(
         file_name="resume.txt", content=content, name="My Resume"
     )
     return str(resume.id)
 
 
-def _create_application(db: Session) -> tuple[str, str]:
-    company = CompanyRepository(db).create({"name": "Acme"})
+def _create_application(db: Session, user: User) -> tuple[str, str]:
+    company = CompanyRepository(db).create({"name": "Acme", "user_id": user.id})
     application = ApplicationRepository(db).create(
-        {"company_id": company.id, "job_title": "Senior Engineer"}
+        {
+            "company_id": company.id,
+            "job_title": "Senior Engineer",
+            "user_id": user.id,
+        }
     )
     return str(application.id), company.name
 
 
-def _inject(db: Session, ai_client: AIClient) -> None:
+def _inject(db: Session, user: User, ai_client: AIClient) -> None:
     app.dependency_overrides[_get_service] = lambda: CoverLetterAIService(
-        db, ai_client=ai_client
+        db, user.id, ai_client=ai_client
     )
 
 
 class TestServiceGenerate:
-    def test_generates_with_explicit_company_and_title(self, db: Session) -> None:
-        resume_id = _create_resume(db)
-        service = CoverLetterAIService(db, ai_client=_mock_client())
+    def test_generates_with_explicit_company_and_title(
+        self, db: Session, test_user: User
+    ) -> None:
+        resume_id = _create_resume(db, test_user)
+        service = CoverLetterAIService(db, test_user.id, ai_client=_mock_client())
 
         result = service.generate(
             CoverLetterGenerateRequest(
@@ -82,10 +91,12 @@ class TestServiceGenerate:
         assert result.resume_name == "My Resume (v1)"
         assert result.usage.total_tokens > 0
 
-    def test_derives_company_and_title_from_application(self, db: Session) -> None:
-        resume_id = _create_resume(db)
-        application_id, company_name = _create_application(db)
-        service = CoverLetterAIService(db, ai_client=_mock_client())
+    def test_derives_company_and_title_from_application(
+        self, db: Session, test_user: User
+    ) -> None:
+        resume_id = _create_resume(db, test_user)
+        application_id, company_name = _create_application(db, test_user)
+        service = CoverLetterAIService(db, test_user.id, ai_client=_mock_client())
 
         result = service.generate(
             CoverLetterGenerateRequest(
@@ -97,9 +108,9 @@ class TestServiceGenerate:
         assert result.company_name == company_name
         assert result.job_title == "Senior Engineer"
 
-    def test_tracks_ai_usage(self, db: Session) -> None:
-        resume_id = _create_resume(db)
-        CoverLetterAIService(db, ai_client=_mock_client()).generate(
+    def test_tracks_ai_usage(self, db: Session, test_user: User) -> None:
+        resume_id = _create_resume(db, test_user)
+        CoverLetterAIService(db, test_user.id, ai_client=_mock_client()).generate(
             CoverLetterGenerateRequest(
                 resume_id=resume_id,
                 job_description=_JOB_DESCRIPTION,
@@ -112,13 +123,13 @@ class TestServiceGenerate:
         assert usage[0].feature == "cover_letter_ai"
         assert usage[0].success is True
 
-    def test_uses_template_cover_letter(self, db: Session) -> None:
-        resume_id = _create_resume(db)
-        CoverLetterService(db).upload(
+    def test_uses_template_cover_letter(self, db: Session, test_user: User) -> None:
+        resume_id = _create_resume(db, test_user)
+        CoverLetterService(db, test_user.id).upload(
             file_name="tmpl.md", content=b"Dear team, ...", name="My Template"
         )
-        templates, _ = CoverLetterService(db).list(name="My Template")
-        service = CoverLetterAIService(db, ai_client=_mock_client())
+        templates, _ = CoverLetterService(db, test_user.id).list(name="My Template")
+        service = CoverLetterAIService(db, test_user.id, ai_client=_mock_client())
 
         result = service.generate(
             CoverLetterGenerateRequest(
@@ -131,9 +142,11 @@ class TestServiceGenerate:
         )
         assert result.markdown
 
-    def test_missing_company_and_title_raises(self, db: Session) -> None:
-        resume_id = _create_resume(db)
-        service = CoverLetterAIService(db, ai_client=_mock_client())
+    def test_missing_company_and_title_raises(
+        self, db: Session, test_user: User
+    ) -> None:
+        resume_id = _create_resume(db, test_user)
+        service = CoverLetterAIService(db, test_user.id, ai_client=_mock_client())
         with pytest.raises(ValidationError):
             service.generate(
                 CoverLetterGenerateRequest(
@@ -143,9 +156,11 @@ class TestServiceGenerate:
 
 
 class TestGenerateApi:
-    def test_returns_generated_letter(self, client: TestClient, db: Session) -> None:
-        resume_id = _create_resume(db)
-        _inject(db, _mock_client())
+    def test_returns_generated_letter(
+        self, client: TestClient, db: Session, test_user: User
+    ) -> None:
+        resume_id = _create_resume(db, test_user)
+        _inject(db, test_user, _mock_client())
         response = client.post(
             "/api/v1/cover-letter-ai/generate",
             json={
@@ -163,10 +178,10 @@ class TestGenerateApi:
         assert body["usage"]["provider"] == "mock"
 
     def test_simulation_works_without_injection(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
         # No injected client → offline simulation (no API key in tests).
-        resume_id = _create_resume(db)
+        resume_id = _create_resume(db, test_user)
         response = client.post(
             "/api/v1/cover-letter-ai/generate",
             json={
@@ -194,9 +209,9 @@ class TestGenerateApi:
         assert response.status_code == 404
 
     def test_422_for_short_job_description(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
-        resume_id = _create_resume(db)
+        resume_id = _create_resume(db, test_user)
         response = client.post(
             "/api/v1/cover-letter-ai/generate",
             json={
@@ -209,10 +224,10 @@ class TestGenerateApi:
         assert response.status_code == 422
 
     def test_invalid_ai_json_returns_502(
-        self, client: TestClient, db: Session
+        self, client: TestClient, db: Session, test_user: User
     ) -> None:
-        resume_id = _create_resume(db)
-        _inject(db, _mock_client(response="not json"))
+        resume_id = _create_resume(db, test_user)
+        _inject(db, test_user, _mock_client(response="not json"))
         response = client.post(
             "/api/v1/cover-letter-ai/generate",
             json={

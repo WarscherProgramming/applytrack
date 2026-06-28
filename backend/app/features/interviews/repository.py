@@ -21,10 +21,11 @@ class InterviewRepository(BaseRepository[Interview]):
         recruiter_id: UUID | None = None,
         status: InterviewStatus | None = None,
         interview_type: InterviewType | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[Interview], int]:
-        base = select(Interview)
+        base = select(Interview).where(Interview.user_id == user_id)
 
         if application_id is not None:
             base = base.where(Interview.application_id == application_id)

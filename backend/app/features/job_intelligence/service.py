@@ -153,10 +153,11 @@ class JobIntelligenceService:
     computed analytics.
     """
 
-    def __init__(self, db: Session, *, ai_client: AIClient | None = None) -> None:
+    def __init__(self, db: Session, user_id: UUID, *, ai_client: AIClient | None = None) -> None:
         self.db = db
-        self.repo = JobIntelligenceRepository(db)
-        self.resume_service = ResumeService(db)
+        self.user_id = user_id
+        self.repo = JobIntelligenceRepository(db, user_id)
+        self.resume_service = ResumeService(db, user_id)
         self._injected_client = ai_client
 
     def build_report(
@@ -454,6 +455,7 @@ class JobIntelligenceService:
                 JobIntelligenceAIResult,
                 db=self.db,
                 feature=FEATURE,
+                user_id=self.user_id,
             )
             result = structured.data
             return JobIntelligenceAI(

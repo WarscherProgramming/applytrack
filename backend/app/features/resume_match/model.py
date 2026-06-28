@@ -5,9 +5,10 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
-class ResumeMatchAnalysis(BaseModel):
+class ResumeMatchAnalysis(UserOwnedMixin, BaseModel):
     """
     A stored Resume Match analysis (history record).
 

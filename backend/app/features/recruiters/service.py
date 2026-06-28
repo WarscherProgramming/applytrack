@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class RecruiterService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, user_id: UUID) -> None:
+        self.user_id = user_id
         self.repo = RecruiterRepository(db)
         # Validates company existence before insert/update — surfaces a clean
         # 404 instead of a PostgreSQL FK violation becoming a 500.
@@ -21,18 +22,18 @@ class RecruiterService:
 
     def create(self, data: RecruiterCreate) -> Recruiter:
         if data.company_id is not None:
-            self.company_repo.get_or_raise(data.company_id)
+            self.company_repo.get_or_raise_for_user(data.company_id, self.user_id)
 
         if data.email is not None:
-            if self.repo.get_by_email(data.email):
+            if self.repo.get_by_email(data.email, self.user_id):
                 raise ConflictError("Recruiter", "email", data.email)
 
-        recruiter = self.repo.create(data.model_dump())
+        recruiter = self.repo.create(data.model_dump() | {"user_id": self.user_id})
         logger.info("Created recruiter id=%s email=%r", recruiter.id, recruiter.email)
         return recruiter
 
     def get(self, recruiter_id: UUID) -> Recruiter:
-        return self.repo.get_or_raise(recruiter_id)
+        return self.repo.get_or_raise_for_user(recruiter_id, self.user_id)
 
     def list(
         self,
@@ -45,26 +46,27 @@ class RecruiterService:
         return self.repo.list_paginated(
             query=query,
             company_id=company_id,
+            user_id=self.user_id,
             skip=skip,
             limit=limit,
         )
 
     def update(self, recruiter_id: UUID, data: RecruiterUpdate) -> Recruiter:
-        recruiter = self.repo.get_or_raise(recruiter_id)
+        recruiter = self.repo.get_or_raise_for_user(recruiter_id, self.user_id)
         updates = data.model_dump(exclude_unset=True)
 
         # Validate the new company only when company_id is being changed to a
         # non-null value. Sending null is a deliberate detach — always allowed.
         new_company_id = updates.get("company_id")
         if "company_id" in updates and new_company_id is not None:
-            self.company_repo.get_or_raise(new_company_id)
+            self.company_repo.get_or_raise_for_user(new_company_id, self.user_id)
 
         # Email uniqueness: skip when email is unchanged (avoids a spurious
         # conflict on a recruiter patching their own existing email).
         if "email" in updates:
             new_email = updates["email"]
             if new_email is not None and new_email != recruiter.email:
-                if self.repo.get_by_email(new_email):
+                if self.repo.get_by_email(new_email, self.user_id):
                     raise ConflictError("Recruiter", "email", new_email)
 
         # Cross-field invariant: merge the submitted patch with current values
@@ -85,6 +87,6 @@ class RecruiterService:
         return updated
 
     def delete(self, recruiter_id: UUID) -> None:
-        recruiter = self.repo.get_or_raise(recruiter_id)
+        recruiter = self.repo.get_or_raise_for_user(recruiter_id, self.user_id)
         self.repo.delete(recruiter)
         logger.info("Deleted recruiter id=%s", recruiter_id)

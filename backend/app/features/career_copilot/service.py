@@ -3,6 +3,7 @@ import json
 import logging
 from collections import Counter
 from datetime import UTC, date, datetime, time, timedelta
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -56,16 +57,17 @@ class CareerCopilotService:
     AI platform to narrate those computed facts.
     """
 
-    def __init__(self, db: Session, *, ai_client: AIClient | None = None) -> None:
+    def __init__(self, db: Session, user_id: UUID, *, ai_client: AIClient | None = None) -> None:
         self.db = db
-        self.repo = CareerCopilotRepository(db)
+        self.user_id = user_id
+        self.repo = CareerCopilotRepository(db, user_id)
         self._injected_client = ai_client
 
     def build_daily_briefing(self) -> CareerCopilotResponse:
         now = datetime.now(UTC)
         today = now.date()
 
-        intelligence = CareerIntelligenceService(self.db).build_dashboard()
+        intelligence = CareerIntelligenceService(self.db, self.user_id).build_dashboard()
         applications = self.repo.list_applications()
         companies = self.repo.list_companies()
         followups = self.repo.list_followups()
@@ -539,6 +541,7 @@ class CareerCopilotService:
                 CopilotBriefingResult,
                 db=self.db,
                 feature=FEATURE,
+                user_id=self.user_id,
             )
             result = structured.data
             return CopilotNarrative(

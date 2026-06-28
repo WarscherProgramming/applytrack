@@ -32,8 +32,18 @@ class BaseRepository(Generic[ModelT]):
         # avoiding a round-trip if the object was loaded earlier in the request.
         return self.db.get(self.model, id)
 
+    def get_for_user(self, id: UUID, user_id: UUID) -> ModelT | None:
+        stmt = select(self.model).where(self.model.id == id, self.model.user_id == user_id)
+        return self.db.scalars(stmt).first()
+
     def get_or_raise(self, id: UUID) -> ModelT:
         instance = self.get(id)
+        if instance is None:
+            raise NotFoundError(self.model.__name__, id)
+        return instance
+
+    def get_or_raise_for_user(self, id: UUID, user_id: UUID) -> ModelT:
+        instance = self.get_for_user(id, user_id)
         if instance is None:
             raise NotFoundError(self.model.__name__, id)
         return instance

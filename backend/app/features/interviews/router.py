@@ -6,6 +6,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.interviews.model import Interview, InterviewStatus, InterviewType
 from app.features.interviews.schema import (
     InterviewCreate,
@@ -18,8 +19,11 @@ from app.features.interviews.service import InterviewService
 router = APIRouter(prefix="/interviews", tags=["interviews"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> InterviewService:
-    return InterviewService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> InterviewService:
+    return InterviewService(db, user.id)
 
 
 ServiceDep = Annotated[InterviewService, Depends(_get_service)]

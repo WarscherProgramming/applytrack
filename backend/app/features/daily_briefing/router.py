@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.daily_briefing.model import Notification
 from app.features.daily_briefing.schemas import (
     DailyBriefingResponse,
@@ -17,8 +18,11 @@ from app.features.daily_briefing.service import DailyBriefingService
 router = APIRouter(prefix="/daily-briefing", tags=["daily_briefing"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> DailyBriefingService:
-    return DailyBriefingService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> DailyBriefingService:
+    return DailyBriefingService(db, user.id)
 
 
 ServiceDep = Annotated[DailyBriefingService, Depends(_get_service)]

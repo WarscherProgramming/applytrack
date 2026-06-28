@@ -3,7 +3,7 @@
 > Handoff snapshot for continuing development. Pairs with
 > [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
-_Last updated: 2026-06-27_
+_Last updated: 2026-06-28_
 
 ## 1. Purpose
 
@@ -25,18 +25,18 @@ verification.
 
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
-- Database schema: Alembic revisions `0001` -> `0014`
-- Backend tests: **447 passing** (Docker-backed full suite), no external network
+- Database schema: Alembic revisions `0001` -> `0015`
+- Backend tests: **450 passing** (Docker-backed full suite), no external network
   calls.
-- Latest **committed** milestone: **M28 - Task System** (`5568a9c`)
-- Current `HEAD` includes Task System: manual and generated tasks, the `tasks`
-  table/migration, generation from Daily Briefing/follow-ups/interviews/Gmail,
-  and a Tasks frontend page.
-- **M29 - Authentication is implemented in the working tree but not yet
-  committed.** It adds `auth` and `users` features, `users` and
-  `auth_refresh_tokens` tables, registration/login/refresh/logout/current-user
-  endpoints, a protected-user dependency, login/register pages, frontend token
-  handling, route guards, and account settings.
+- Latest **committed** milestone: **M29 - Authentication** (`49ec6cc`)
+- Current `HEAD` includes Authentication: `auth` and `users` features,
+  `users` and `auth_refresh_tokens` tables, registration/login/refresh/logout/
+  current-user endpoints, a protected-user dependency, login/register pages,
+  frontend token handling, route guards, and account settings.
+- **M30 - User Data Ownership & Query Scoping is implemented in the working tree
+  but not yet committed.** It adds user ownership columns, scoped services and
+  repositories, route protection for existing domain APIs, safe local/demo
+  backfill, per-user uniqueness/dedupe constraints, and cross-user 404 behavior.
 
 ### Milestone History
 
@@ -62,7 +62,8 @@ verification.
 | **M26** | **Daily Briefing & Notifications** | **committed** |
 | **M27** | **Calendar Integration** | **committed** |
 | **M28** | **Task System** | **committed** |
-| **M29** | **Authentication** | **in working tree (uncommitted)** |
+| **M29** | **Authentication** | **committed** |
+| **M30** | **User Data Ownership & Query Scoping** | **in working tree (uncommitted)** |
 
 ## 3. Completed Features
 
@@ -113,15 +114,16 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   refresh-token rotation, logout revocation, current-user lookup, protected
   route dependency, frontend auth provider, token refresh handling, protected
   app shell, and account settings.
+- **User Data Ownership** (M30) - existing user-created domain records are owned
+  by `users.id`, existing feature routers require the current-user dependency,
+  create paths stamp `current_user.id`, list/read/update/delete paths are scoped
+  by owner, and cross-user direct access returns 404.
 
 ## 4. Current Roadmap
 
 Short term (recommended order):
-1. **Review and commit M29** (Authentication).
-2. **User data scoping for existing records** - add user ownership columns and
-   query scoping to CRM/domain tables before real multi-user deployment. This is
-   intentionally separate from organizations, teams, and cloud sync.
-3. **Copilot persistence** - persist pinned/completed recommendations and daily
+1. **Review and commit M30** (User Data Ownership & Query Scoping).
+2. **Copilot persistence** - persist pinned/completed recommendations and daily
    briefing history once authentication and user scoping exist.
 
 Planned/aspirational:
@@ -133,15 +135,9 @@ Planned/aspirational:
 ## 5. Known Technical Debt
 
 **Architectural gaps**
-- **No per-user ownership scoping on existing domain rows.** Authentication now
-  exists, but companies, applications, recruiters, interviews, follow-ups,
-  documents, Gmail records, notifications, calendar sync records, and tasks are
-  still effectively single-user data until user ownership columns and scoped
-  repositories are added.
-- **Existing feature routers are not globally protected yet.** The frontend app
-  shell is protected and new account endpoints require a current user, but the
-  existing CRM/API routers still need route-level protection as part of the
-  ownership-scoping pass.
+- **No organizations/teams yet.** M30 establishes single-user ownership and
+  query scoping only; shared workspaces, orgs, roles, billing, and cloud sync
+  remain out of scope.
 - **Real provider paths are unverified end-to-end.** OpenAI, Gmail,
   Opportunity Discovery providers, and Google/Outlook calendar writes are
   covered with mocks/simulation but not live-provider validation.
@@ -190,17 +186,14 @@ Planned/aspirational:
 
 ## 7. Next Recommended Milestone
 
-**User data scoping for existing records.**
+**Copilot persistence.**
 
-Rationale: M29 establishes identity, password hashing, token issuance, frontend
-route protection, and account settings. The next production-readiness step is
-to make existing domain data user-owned and to protect existing feature routers
-with the shared current-user dependency.
+Rationale: M29 established identity and M30 scopes user-created data. The next
+step is to persist user-specific Copilot choices so the proactive features can
+respect the user's decisions over time.
 
 Suggested shape:
-- Add `user_id` ownership columns and indexes to existing domain tables.
-- Scope repositories and services by the authenticated user.
-- Protect existing feature routers with the auth dependency.
-- Backfill or deterministic-seed ownership for local/dev data.
-- Keep organizations, teams, and cloud sync out of scope until after single-user
-  ownership is complete.
+- Persist pinned/completed Copilot recommendations and daily briefing history.
+- Feed persisted recommendation state back into Daily Briefing, Tasks, and
+  Career Copilot without duplicating analytics logic.
+- Keep organizations, teams, billing, and cloud sync out of scope.

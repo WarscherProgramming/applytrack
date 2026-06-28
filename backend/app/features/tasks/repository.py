@@ -28,10 +28,11 @@ class TaskRepository(BaseRepository[Task]):
         recruiter_id: UUID | None = None,
         interview_id: UUID | None = None,
         followup_id: UUID | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[Task], int]:
-        base = select(Task)
+        base = select(Task).where(Task.user_id == user_id)
         if status is not None:
             base = base.where(Task.status == status.value)
         if priority is not None:
@@ -64,22 +65,27 @@ class TaskRepository(BaseRepository[Task]):
         )
         return items, total
 
-    def get_by_source_key(self, source_key: str) -> Task | None:
-        return self.db.scalars(select(Task).where(Task.source_key == source_key)).first()
+    def get_by_source_key(self, source_key: str, user_id: UUID) -> Task | None:
+        return self.db.scalars(
+            select(Task).where(Task.source_key == source_key, Task.user_id == user_id)
+        ).first()
 
-    def list_overdue_followups(self, today: date) -> list[FollowUp]:
+    def list_overdue_followups(self, today: date, user_id: UUID) -> list[FollowUp]:
         return list(
             self.db.scalars(
                 select(FollowUp)
                 .where(
                     FollowUp.status == FollowUpStatus.PENDING.value,
                     FollowUp.due_date < today,
+                    FollowUp.user_id == user_id,
                 )
                 .order_by(FollowUp.due_date.asc())
             ).all()
         )
 
-    def list_upcoming_interviews(self, *, now: datetime, until: datetime) -> list[Interview]:
+    def list_upcoming_interviews(
+        self, *, now: datetime, until: datetime, user_id: UUID
+    ) -> list[Interview]:
         return list(
             self.db.scalars(
                 select(Interview)
@@ -87,26 +93,32 @@ class TaskRepository(BaseRepository[Task]):
                     Interview.status == InterviewStatus.SCHEDULED.value,
                     Interview.scheduled_at >= now,
                     Interview.scheduled_at <= until,
+                    Interview.user_id == user_id,
                 )
                 .order_by(Interview.scheduled_at.asc())
             ).all()
         )
 
-    def list_unread_recruiter_emails(self) -> list[EmailMessage]:
+    def list_unread_recruiter_emails(self, user_id: UUID) -> list[EmailMessage]:
         return list(
             self.db.scalars(
                 select(EmailMessage)
                 .where(
                     EmailMessage.direction == "inbound",
                     EmailMessage.labels.contains(["UNREAD"]),
+                    EmailMessage.user_id == user_id,
                 )
                 .order_by(EmailMessage.sent_at.desc())
                 .limit(25)
             ).all()
         )
 
-    def list_applications(self) -> list[JobApplication]:
-        return list(self.db.scalars(select(JobApplication)).all())
+    def list_applications(self, user_id: UUID) -> list[JobApplication]:
+        return list(
+            self.db.scalars(
+                select(JobApplication).where(JobApplication.user_id == user_id)
+            ).all()
+        )
 
-    def list_companies(self) -> list[Company]:
-        return list(self.db.scalars(select(Company)).all())
+    def list_companies(self, user_id: UUID) -> list[Company]:
+        return list(self.db.scalars(select(Company).where(Company.user_id == user_id)).all())

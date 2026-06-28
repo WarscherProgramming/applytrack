@@ -109,7 +109,9 @@ def test_refresh_rotates_and_logout_revokes_refresh_token(client: TestClient) ->
     assert after_logout.status_code == 401
 
 
-def test_protected_current_user_requires_bearer_token(client: TestClient) -> None:
-    unauthenticated = client.get("/api/v1/auth/me")
+def test_protected_current_user_requires_bearer_token(
+    anonymous_client: TestClient,
+) -> None:
+    unauthenticated = anonymous_client.get("/api/v1/auth/me")
 
     assert unauthenticated.status_code == 401

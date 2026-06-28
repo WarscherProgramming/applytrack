@@ -15,6 +15,7 @@ from app.features.gmail.models import EmailMessage, GmailAccount
 from app.features.interviews.model import Interview
 from app.features.resume_match.model import ResumeMatchAnalysis
 from app.features.resumes.model import Resume
+from app.features.users.model import User
 from app.main import app
 
 
@@ -36,17 +37,22 @@ def _mock_client(response: str | None = None) -> AIClient:
     return AIClient(MockProvider(default_response=payload), default_model="mock-model")
 
 
-def _inject_client(db: Session, client: AIClient | None = None) -> None:
+def _inject_client(db: Session, user: User, client: AIClient | None = None) -> None:
     app.dependency_overrides[_get_service] = lambda: CareerCopilotService(
-        db, ai_client=client or _mock_client()
+        db, user.id, ai_client=client or _mock_client()
     )
 
 
-def _seed_copilot_data(db: Session) -> None:
+def _seed_copilot_data(db: Session, user: User) -> None:
     now = datetime.now(UTC)
     today = now.date()
 
-    company = Company(name="Acme Health", industry="Healthcare", location="Remote")
+    company = Company(
+        name="Acme Health",
+        industry="Healthcare",
+        location="Remote",
+        user_id=user.id,
+    )
     db.add(company)
     db.flush()
 
@@ -55,6 +61,7 @@ def _seed_copilot_data(db: Session) -> None:
         file_name="resume.txt",
         storage_path="resumes/backend.txt",
         version=1,
+        user_id=user.id,
     )
     db.add(resume)
     db.flush()
@@ -65,6 +72,7 @@ def _seed_copilot_data(db: Session) -> None:
         status=ApplicationStatus.INTERVIEW.value,
         date_applied=date(2026, 1, 1),
         resume_id=resume.id,
+        user_id=user.id,
     )
     db.add(application)
     db.flush()
@@ -78,6 +86,7 @@ def _seed_copilot_data(db: Session) -> None:
                 status="pending",
                 priority="high",
                 due_date=today - timedelta(days=1),
+                user_id=user.id,
             ),
             FollowUp(
                 application_id=application.id,
@@ -86,6 +95,7 @@ def _seed_copilot_data(db: Session) -> None:
                 status="pending",
                 priority="medium",
                 due_date=today,
+                user_id=user.id,
             ),
             Interview(
                 application_id=application.id,
@@ -94,11 +104,14 @@ def _seed_copilot_data(db: Session) -> None:
                 duration_minutes=45,
                 status="scheduled",
                 notes="System design",
+                user_id=user.id,
             ),
         ]
     )
 
-    account = GmailAccount(email_address="jobseeker@example.com", status="connected")
+    account = GmailAccount(
+        email_address="jobseeker@example.com", status="connected", user_id=user.id
+    )
     db.add(account)
     db.flush()
     db.add(
@@ -117,6 +130,7 @@ def _seed_copilot_data(db: Session) -> None:
             company_id=company.id,
             match_confidence=0.9,
             match_reason="company domain",
+            user_id=user.id,
         )
     )
     db.add(
@@ -128,16 +142,17 @@ def _seed_copilot_data(db: Session) -> None:
             result={"missing_skills": ["Kubernetes"], "interview_topics": ["System design"]},
             provider="mock",
             model="mock-model",
+            user_id=user.id,
         )
     )
     db.flush()
 
 
 def test_daily_briefing_aggregates_priorities_and_ai(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_copilot_data(db)
-    _inject_client(db)
+    _seed_copilot_data(db, test_user)
+    _inject_client(db, test_user)
 
     response = client.get("/api/v1/career-copilot/daily")
 
@@ -155,10 +170,10 @@ def test_daily_briefing_aggregates_priorities_and_ai(
 
 
 def test_ai_failure_returns_deterministic_briefing(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_copilot_data(db)
-    _inject_client(db, _mock_client(response="not json"))
+    _seed_copilot_data(db, test_user)
+    _inject_client(db, test_user, _mock_client(response="not json"))
 
     response = client.get("/api/v1/career-copilot/daily")
 

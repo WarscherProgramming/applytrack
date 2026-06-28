@@ -10,6 +10,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.shared.documents.schema import (
     DocumentListResponse,
     DocumentResponse,
@@ -19,7 +20,7 @@ from app.shared.documents.service import DocumentService
 
 # A service factory takes a request-scoped Session and returns the concrete
 # (Resume / CoverLetter) service.
-ServiceFactory = Callable[[Session], DocumentService]
+ServiceFactory = Callable[[Session, UUID], DocumentService]
 
 
 def build_document_router(
@@ -38,8 +39,11 @@ def build_document_router(
     """
     router = APIRouter(prefix=prefix, tags=[tag])
 
-    def _get_service(db: Annotated[Session, Depends(get_db)]) -> DocumentService:
-        return service_factory(db)
+    def _get_service(
+        db: Annotated[Session, Depends(get_db)],
+        user: CurrentUser,
+    ) -> DocumentService:
+        return service_factory(db, user.id)
 
     ServiceDep = Annotated[DocumentService, Depends(_get_service)]
 

@@ -6,6 +6,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.interview_ai.model import InterviewPrepPackage
 from app.features.interview_ai.schemas import (
     InterviewPrepListItem,
@@ -20,8 +21,11 @@ from app.features.interview_ai.service import InterviewPrepService
 router = APIRouter(prefix="/interview-prep", tags=["interview_ai"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> InterviewPrepService:
-    return InterviewPrepService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> InterviewPrepService:
+    return InterviewPrepService(db, user.id)
 
 
 ServiceDep = Annotated[InterviewPrepService, Depends(_get_service)]

@@ -42,10 +42,11 @@ class InterviewPrepService:
     can personalise output.
     """
 
-    def __init__(self, db: Session, *, ai_client: AIClient | None = None) -> None:
+    def __init__(self, db: Session, user_id: UUID, *, ai_client: AIClient | None = None) -> None:
         self.db = db
+        self.user_id = user_id
         self.repo = InterviewPrepRepository(db)
-        self.resume_service = ResumeService(db)
+        self.resume_service = ResumeService(db, user_id)
         self.application_repo = ApplicationRepository(db)
         self.company_repo = CompanyRepository(db)
         self.interview_repo = InterviewRepository(db)
@@ -74,7 +75,10 @@ class InterviewPrepService:
     def create(self, data: InterviewPrepRequest) -> InterviewPrepPackage:
         application: JobApplication | None = None
         if data.application_id is not None:
-            application = self.application_repo.get_or_raise(data.application_id)
+            application = self.application_repo.get_or_raise_for_user(
+                data.application_id,
+                self.user_id,
+            )
 
         company_name, job_title = self._resolve_company_title(data, application)
         resume_id, resume_text = self._resolve_resume(data, application)
@@ -105,6 +109,7 @@ class InterviewPrepService:
             InterviewPrepResult,
             db=self.db,
             feature=FEATURE,
+            user_id=self.user_id,
         )
         result = structured.data
         ai = structured.result
@@ -130,6 +135,7 @@ class InterviewPrepService:
                     else None
                 ),
                 "latency_ms": ai.latency_ms,
+                "user_id": self.user_id,
             }
         )
         logger.info(
@@ -144,7 +150,7 @@ class InterviewPrepService:
         return package
 
     def get(self, package_id: UUID) -> InterviewPrepPackage:
-        return self.repo.get_or_raise(package_id)
+        return self.repo.get_or_raise_for_user(package_id, self.user_id)
 
     def list(
         self,
@@ -154,11 +160,14 @@ class InterviewPrepService:
         limit: int = 50,
     ) -> tuple[list[InterviewPrepPackage], int]:
         return self.repo.list_paginated(
-            application_id=application_id, skip=skip, limit=limit
+            application_id=application_id,
+            user_id=self.user_id,
+            skip=skip,
+            limit=limit,
         )
 
     def delete(self, package_id: UUID) -> None:
-        package = self.repo.get_or_raise(package_id)
+        package = self.repo.get_or_raise_for_user(package_id, self.user_id)
         self.repo.delete(package)
         logger.info("Deleted interview prep id=%s", package_id)
 
@@ -170,7 +179,10 @@ class InterviewPrepService:
         company_name = (data.company_name or "").strip()
         job_title = (data.job_title or "").strip()
         if application is not None:
-            company = self.company_repo.get_or_raise(application.company_id)
+            company = self.company_repo.get_or_raise_for_user(
+                application.company_id,
+                self.user_id,
+            )
             company_name = company_name or company.name
             job_title = job_title or application.job_title
         if not company_name:
@@ -219,7 +231,9 @@ class InterviewPrepService:
                 parts.append(f"Application notes:\n{application.notes.strip()}")
 
             interviews, _ = self.interview_repo.list_paginated(
-                application_id=application.id, limit=20
+                application_id=application.id,
+                user_id=self.user_id,
+                limit=20,
             )
             interview_lines = []
             for iv in interviews:
@@ -237,7 +251,9 @@ class InterviewPrepService:
                 )
 
             recruiters, _ = self.recruiter_repo.list_paginated(
-                company_id=application.company_id, limit=10
+                company_id=application.company_id,
+                user_id=self.user_id,
+                limit=10,
             )
             recruiter_notes = [r.notes.strip() for r in recruiters if r.notes]
             if recruiter_notes:
@@ -247,7 +263,9 @@ class InterviewPrepService:
                 )
 
             emails, _ = self.email_repo.list_filtered(
-                application_id=application.id, limit=MAX_CONTEXT_EMAILS
+                application_id=application.id,
+                user_id=self.user_id,
+                limit=MAX_CONTEXT_EMAILS,
             )
             if emails:
                 email_lines = []

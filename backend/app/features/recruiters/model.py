@@ -5,9 +5,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
-class Recruiter(BaseModel):
+class Recruiter(UserOwnedMixin, BaseModel):
     __tablename__ = "recruiters"
 
     # Nullable FK — a recruiter may exist without a known company affiliation.

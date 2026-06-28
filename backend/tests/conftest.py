@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,7 +9,9 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import app.database.base  # noqa: F401 — registers all models with Base.metadata
 from app.core.config import settings
+from app.core.security import create_access_token, hash_password
 from app.database.session import get_db
+from app.features.users.model import User
 from app.main import app
 from app.shared.base_model import Base
 
@@ -72,7 +75,20 @@ def db(engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client(db: Session) -> Generator[TestClient, None, None]:
+def test_user(db: Session) -> User:
+    user = User(
+        email=f"test-user-{uuid4()}@example.com",
+        hashed_password=hash_password("StrongPass1"),
+        full_name="Test User",
+        is_active=True,
+    )
+    db.add(user)
+    db.flush()
+    return user
+
+
+@pytest.fixture
+def client(db: Session, test_user: User) -> Generator[TestClient, None, None]:
     """
     Provide a FastAPI TestClient wired to the test session.
 
@@ -82,6 +98,21 @@ def client(db: Session) -> Generator[TestClient, None, None]:
     and all changes are rolled back when the test ends.
     """
 
+    def override_get_db() -> Generator[Session, None, None]:
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        test_client.headers.update(
+            {"Authorization": f"Bearer {create_access_token(str(test_user.id))}"}
+        )
+        test_client.test_user = test_user  # type: ignore[attr-defined]
+        yield test_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def anonymous_client(db: Session) -> Generator[TestClient, None, None]:
     def override_get_db() -> Generator[Session, None, None]:
         yield db
 

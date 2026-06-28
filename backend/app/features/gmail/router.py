@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.gmail.schemas import (
     EmailListResponse,
     GmailConnectResponse,
@@ -21,8 +22,11 @@ from app.features.gmail.service import GmailService
 router = APIRouter(prefix="/gmail", tags=["gmail"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> GmailService:
-    return GmailService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> GmailService:
+    return GmailService(db, user.id)
 
 
 ServiceDep = Annotated[GmailService, Depends(_get_service)]

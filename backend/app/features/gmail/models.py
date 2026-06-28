@@ -1,21 +1,25 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
-class GmailAccount(BaseModel):
+class GmailAccount(UserOwnedMixin, BaseModel):
     """A connected Gmail account. Single-account today, but modelled as a table
     so multi-account/multi-user is a non-breaking change later."""
 
     __tablename__ = "gmail_accounts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "email_address", name="uq_gmail_accounts_user_email"),
+    )
 
     email_address: Mapped[str] = mapped_column(
-        String(320), nullable=False, unique=True, index=True
+        String(320), nullable=False, index=True
     )
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="connected"
@@ -32,7 +36,7 @@ class GmailAccount(BaseModel):
     last_sync_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
 
-class EmailMessage(BaseModel):
+class EmailMessage(UserOwnedMixin, BaseModel):
     """An imported Gmail message with its automatic match results."""
 
     __tablename__ = "email_messages"

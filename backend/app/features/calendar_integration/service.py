@@ -45,9 +45,10 @@ INACTIVE_FOLLOWUP_STATUSES = {"completed", "skipped"}
 class CalendarIntegrationService:
     """Coordinates deterministic ApplyTrack item sync through provider adapters."""
 
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, user_id: UUID) -> None:
         self.db = db
-        self.repo = CalendarIntegrationRepository(db)
+        self.user_id = user_id
+        self.repo = CalendarIntegrationRepository(db, user_id)
         self.providers: dict[CalendarProvider, CalendarProviderAdapter] = {
             CalendarProvider.GOOGLE: GoogleCalendarProvider(),
             CalendarProvider.OUTLOOK: OutlookCalendarProvider(),

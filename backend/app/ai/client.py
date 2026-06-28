@@ -1,6 +1,7 @@
 import logging
 import time
 from decimal import Decimal
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -51,6 +52,7 @@ class AIClient:
         *,
         db: Session | None = None,
         feature: str | None = None,
+        user_id: UUID | None = None,
     ) -> AIResult:
         """Run a generation through retries, then track and return the result.
 
@@ -75,6 +77,7 @@ class AIClient:
                     provider=self.provider.name,
                     model=model,
                     feature=feature,
+                    user_id=user_id,
                     usage=TokenUsage(),
                     latency_ms=latency_ms,
                     success=False,
@@ -90,6 +93,7 @@ class AIClient:
                 provider=self.provider.name,
                 model=response.model,
                 feature=feature,
+                user_id=user_id,
                 usage=response.usage,
                 latency_ms=latency_ms,
                 success=True,
@@ -112,6 +116,7 @@ class AIClient:
         *,
         db: Session | None = None,
         feature: str | None = None,
+        user_id: UUID | None = None,
     ) -> StructuredResult[T]:
         """Generate, then parse+validate the output into `schema`.
 
@@ -120,7 +125,7 @@ class AIClient:
         (the tokens were genuinely consumed).
         """
         json_request = request.model_copy(update={"json_mode": True})
-        result = self.generate(json_request, db=db, feature=feature)
+        result = self.generate(json_request, db=db, feature=feature, user_id=user_id)
         data = parse_model(result.text, schema)
         return StructuredResult(data=data, result=result)
 

@@ -16,6 +16,7 @@ from app.features.followups.service import FollowUpService
 
 _DUE = date(2024, 6, 15)
 _STAMP = datetime(2024, 6, 10, 12, 0, 0, tzinfo=timezone.utc)
+USER_ID = uuid4()
 
 
 @pytest.fixture
@@ -46,6 +47,7 @@ def service(
     mock_interview_repo: MagicMock,
 ) -> FollowUpService:
     svc = FollowUpService.__new__(FollowUpService)
+    svc.user_id = USER_ID
     svc.repo = mock_repo
     svc.application_repo = mock_application_repo
     svc.recruiter_repo = mock_recruiter_repo
@@ -93,14 +95,17 @@ class TestFollowUpServiceCreate:
         mock_application_repo: MagicMock,
     ) -> None:
         application_id = uuid4()
-        mock_application_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
         expected = _make_followup(application_id=application_id)
         mock_repo.create.return_value = expected
 
         result = service.create(_create_data(application_id=application_id))
 
-        mock_application_repo.get_or_raise.assert_called_once_with(application_id)
+        mock_application_repo.get_or_raise_for_user.assert_called_once_with(
+            application_id, USER_ID
+        )
         mock_repo.create.assert_called_once()
+        assert mock_repo.create.call_args[0][0]["user_id"] == USER_ID
         assert result is expected
 
     def test_raises_not_found_when_application_does_not_exist(
@@ -109,7 +114,7 @@ class TestFollowUpServiceCreate:
         mock_application_repo: MagicMock,
         mock_repo: MagicMock,
     ) -> None:
-        mock_application_repo.get_or_raise.side_effect = NotFoundError(
+        mock_application_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "JobApplication", uuid4()
         )
 
@@ -122,37 +127,47 @@ class TestFollowUpServiceCreate:
         self,
         service: FollowUpService,
         mock_repo: MagicMock,
+        mock_application_repo: MagicMock,
         mock_recruiter_repo: MagicMock,
     ) -> None:
         recruiter_id = uuid4()
-        mock_recruiter_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
+        mock_recruiter_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.create.return_value = _make_followup(recruiter_id=recruiter_id)
 
         service.create(_create_data(recruiter_id=recruiter_id))
 
-        mock_recruiter_repo.get_or_raise.assert_called_once_with(recruiter_id)
+        mock_recruiter_repo.get_or_raise_for_user.assert_called_once_with(
+            recruiter_id, USER_ID
+        )
 
     def test_validates_interview_when_provided(
         self,
         service: FollowUpService,
         mock_repo: MagicMock,
+        mock_application_repo: MagicMock,
         mock_interview_repo: MagicMock,
     ) -> None:
         interview_id = uuid4()
-        mock_interview_repo.get_or_raise.return_value = MagicMock()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
+        mock_interview_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.create.return_value = _make_followup(interview_id=interview_id)
 
         service.create(_create_data(interview_id=interview_id))
 
-        mock_interview_repo.get_or_raise.assert_called_once_with(interview_id)
+        mock_interview_repo.get_or_raise_for_user.assert_called_once_with(
+            interview_id, USER_ID
+        )
 
     def test_raises_not_found_when_recruiter_does_not_exist(
         self,
         service: FollowUpService,
+        mock_application_repo: MagicMock,
         mock_recruiter_repo: MagicMock,
         mock_repo: MagicMock,
     ) -> None:
-        mock_recruiter_repo.get_or_raise.side_effect = NotFoundError(
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
+        mock_recruiter_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "Recruiter", uuid4()
         )
 
@@ -164,10 +179,12 @@ class TestFollowUpServiceCreate:
     def test_raises_not_found_when_interview_does_not_exist(
         self,
         service: FollowUpService,
+        mock_application_repo: MagicMock,
         mock_interview_repo: MagicMock,
         mock_repo: MagicMock,
     ) -> None:
-        mock_interview_repo.get_or_raise.side_effect = NotFoundError(
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
+        mock_interview_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "Interview", uuid4()
         )
 
@@ -180,15 +197,17 @@ class TestFollowUpServiceCreate:
         self,
         service: FollowUpService,
         mock_repo: MagicMock,
+        mock_application_repo: MagicMock,
         mock_recruiter_repo: MagicMock,
         mock_interview_repo: MagicMock,
     ) -> None:
         mock_repo.create.return_value = _make_followup()
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
 
         service.create(_create_data())
 
-        mock_recruiter_repo.get_or_raise.assert_not_called()
-        mock_interview_repo.get_or_raise.assert_not_called()
+        mock_recruiter_repo.get_or_raise_for_user.assert_not_called()
+        mock_interview_repo.get_or_raise_for_user.assert_not_called()
 
     def test_defaults_status_pending_and_priority_medium(
         self, service: FollowUpService, mock_repo: MagicMock
@@ -245,17 +264,17 @@ class TestFollowUpServiceGet:
     ) -> None:
         followup_id = uuid4()
         expected = _make_followup(id=followup_id)
-        mock_repo.get_or_raise.return_value = expected
+        mock_repo.get_or_raise_for_user.return_value = expected
 
         result = service.get(followup_id)
 
-        mock_repo.get_or_raise.assert_called_once_with(followup_id)
+        mock_repo.get_or_raise_for_user.assert_called_once_with(followup_id, USER_ID)
         assert result is expected
 
     def test_propagates_not_found_from_repository(
         self, service: FollowUpService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("FollowUp", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("FollowUp", uuid4())
 
         with pytest.raises(NotFoundError):
             service.get(uuid4())
@@ -296,6 +315,7 @@ class TestFollowUpServiceList:
             overdue=False,
             due_today=False,
             due_this_week=False,
+            user_id=USER_ID,
             skip=5,
             limit=10,
         )
@@ -347,14 +367,14 @@ class TestFollowUpServiceUpdate:
     ) -> None:
         followup = _make_followup()
         updated = _make_followup(id=followup.id, priority=FollowUpPriority.HIGH.value)
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
         mock_repo.update.return_value = updated
 
         result = service.update(
             followup.id, FollowUpUpdate(priority=FollowUpPriority.HIGH)
         )
 
-        mock_application_repo.get_or_raise.assert_not_called()
+        mock_application_repo.get_or_raise_for_user.assert_not_called()
         mock_repo.update.assert_called_once_with(
             followup, {"priority": FollowUpPriority.HIGH}
         )
@@ -368,15 +388,17 @@ class TestFollowUpServiceUpdate:
     ) -> None:
         followup = _make_followup()
         new_application_id = uuid4()
-        mock_repo.get_or_raise.return_value = followup
-        mock_application_repo.get_or_raise.return_value = MagicMock()
+        mock_repo.get_or_raise_for_user.return_value = followup
+        mock_application_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.update.return_value = followup
 
         service.update(
             followup.id, FollowUpUpdate(application_id=new_application_id)
         )
 
-        mock_application_repo.get_or_raise.assert_called_once_with(new_application_id)
+        mock_application_repo.get_or_raise_for_user.assert_called_once_with(
+            new_application_id, USER_ID
+        )
 
     def test_validates_new_recruiter(
         self,
@@ -386,13 +408,15 @@ class TestFollowUpServiceUpdate:
     ) -> None:
         followup = _make_followup()
         new_recruiter_id = uuid4()
-        mock_repo.get_or_raise.return_value = followup
-        mock_recruiter_repo.get_or_raise.return_value = MagicMock()
+        mock_repo.get_or_raise_for_user.return_value = followup
+        mock_recruiter_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.update.return_value = followup
 
         service.update(followup.id, FollowUpUpdate(recruiter_id=new_recruiter_id))
 
-        mock_recruiter_repo.get_or_raise.assert_called_once_with(new_recruiter_id)
+        mock_recruiter_repo.get_or_raise_for_user.assert_called_once_with(
+            new_recruiter_id, USER_ID
+        )
 
     def test_validates_new_interview(
         self,
@@ -402,13 +426,15 @@ class TestFollowUpServiceUpdate:
     ) -> None:
         followup = _make_followup()
         new_interview_id = uuid4()
-        mock_repo.get_or_raise.return_value = followup
-        mock_interview_repo.get_or_raise.return_value = MagicMock()
+        mock_repo.get_or_raise_for_user.return_value = followup
+        mock_interview_repo.get_or_raise_for_user.return_value = MagicMock()
         mock_repo.update.return_value = followup
 
         service.update(followup.id, FollowUpUpdate(interview_id=new_interview_id))
 
-        mock_interview_repo.get_or_raise.assert_called_once_with(new_interview_id)
+        mock_interview_repo.get_or_raise_for_user.assert_called_once_with(
+            new_interview_id, USER_ID
+        )
 
     def test_allows_detaching_recruiter_with_null(
         self,
@@ -417,18 +443,18 @@ class TestFollowUpServiceUpdate:
         mock_recruiter_repo: MagicMock,
     ) -> None:
         followup = _make_followup(recruiter_id=uuid4())
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
         mock_repo.update.return_value = followup
 
         service.update(followup.id, FollowUpUpdate(recruiter_id=None))
 
-        mock_recruiter_repo.get_or_raise.assert_not_called()
+        mock_recruiter_repo.get_or_raise_for_user.assert_not_called()
 
     def test_status_to_completed_sets_completed_at(
         self, service: FollowUpService, mock_repo: MagicMock
     ) -> None:
         followup = _make_followup(status=FollowUpStatus.PENDING.value, completed_at=None)
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
         mock_repo.update.return_value = followup
 
         service.update(followup.id, FollowUpUpdate(status=FollowUpStatus.COMPLETED))
@@ -442,7 +468,7 @@ class TestFollowUpServiceUpdate:
         followup = _make_followup(
             status=FollowUpStatus.COMPLETED.value, completed_at=_STAMP
         )
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
         mock_repo.update.return_value = followup
 
         service.update(followup.id, FollowUpUpdate(status=FollowUpStatus.PENDING))
@@ -458,7 +484,7 @@ class TestFollowUpServiceUpdate:
         followup = _make_followup(
             status=FollowUpStatus.COMPLETED.value, completed_at=_STAMP
         )
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
         mock_repo.update.return_value = followup
 
         service.update(followup.id, FollowUpUpdate(status=FollowUpStatus.COMPLETED))
@@ -470,7 +496,7 @@ class TestFollowUpServiceUpdate:
         self, service: FollowUpService, mock_repo: MagicMock
     ) -> None:
         followup = _make_followup(status=FollowUpStatus.PENDING.value, completed_at=None)
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
         mock_repo.update.return_value = followup
 
         service.update(
@@ -485,7 +511,7 @@ class TestFollowUpServiceUpdate:
         self, service: FollowUpService, mock_repo: MagicMock
     ) -> None:
         followup = _make_followup(status=FollowUpStatus.PENDING.value, completed_at=None)
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
         mock_repo.update.return_value = followup
 
         service.update(followup.id, FollowUpUpdate(status=FollowUpStatus.SKIPPED))
@@ -500,8 +526,8 @@ class TestFollowUpServiceUpdate:
         mock_application_repo: MagicMock,
     ) -> None:
         followup = _make_followup()
-        mock_repo.get_or_raise.return_value = followup
-        mock_application_repo.get_or_raise.side_effect = NotFoundError(
+        mock_repo.get_or_raise_for_user.return_value = followup
+        mock_application_repo.get_or_raise_for_user.side_effect = NotFoundError(
             "JobApplication", uuid4()
         )
 
@@ -511,7 +537,7 @@ class TestFollowUpServiceUpdate:
     def test_propagates_not_found_when_followup_missing(
         self, service: FollowUpService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("FollowUp", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("FollowUp", uuid4())
 
         with pytest.raises(NotFoundError):
             service.update(uuid4(), FollowUpUpdate(title="New title"))
@@ -527,7 +553,7 @@ class TestFollowUpServiceDelete:
         self, service: FollowUpService, mock_repo: MagicMock
     ) -> None:
         followup = _make_followup()
-        mock_repo.get_or_raise.return_value = followup
+        mock_repo.get_or_raise_for_user.return_value = followup
 
         service.delete(followup.id)
 
@@ -536,7 +562,7 @@ class TestFollowUpServiceDelete:
     def test_propagates_not_found_from_repository(
         self, service: FollowUpService, mock_repo: MagicMock
     ) -> None:
-        mock_repo.get_or_raise.side_effect = NotFoundError("FollowUp", uuid4())
+        mock_repo.get_or_raise_for_user.side_effect = NotFoundError("FollowUp", uuid4())
 
         with pytest.raises(NotFoundError):
             service.delete(uuid4())

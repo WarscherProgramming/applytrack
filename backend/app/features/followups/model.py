@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
 class FollowUpType(str, enum.Enum):
@@ -33,7 +34,7 @@ class FollowUpPriority(str, enum.Enum):
     URGENT = "urgent"
 
 
-class FollowUp(BaseModel):
+class FollowUp(UserOwnedMixin, BaseModel):
     __tablename__ = "followups"
 
     # Required FK — a follow-up always tracks work for a specific application.

@@ -43,7 +43,9 @@ class DocumentService:
         repository: DocumentRepository,
         storage_prefix: str,
         resource_name: str,
+        user_id: UUID,
     ) -> None:
+        self.user_id = user_id
         self.repo = repository
         self.storage = get_storage()
         self.storage_prefix = storage_prefix
@@ -86,7 +88,7 @@ class DocumentService:
 
         display_name = (name or "").strip() or PurePosixPath(file_name).stem
         display_name = display_name or file_name
-        version = self.repo.next_version(display_name)
+        version = self.repo.next_version(display_name, self.user_id)
 
         # Insert the row first (flush only — get_db owns the commit). If the
         # subsequent storage write fails, the raised error rolls the row back, so
@@ -99,6 +101,7 @@ class DocumentService:
                 "storage_path": key,
                 "version": version,
                 "notes": (notes or None),
+                "user_id": self.user_id,
             }
         )
         self.storage.save(key, content)
@@ -114,7 +117,7 @@ class DocumentService:
         return record
 
     def get(self, doc_id: UUID) -> DocumentBase:
-        return self.repo.get_or_raise(doc_id)
+        return self.repo.get_or_raise_for_user(doc_id, self.user_id)
 
     def list(
         self,
@@ -125,11 +128,15 @@ class DocumentService:
         limit: int = 100,
     ) -> tuple[list[DocumentBase], int]:
         return self.repo.list_paginated(
-            query=query, name=name, skip=skip, limit=limit
+            query=query,
+            name=name,
+            user_id=self.user_id,
+            skip=skip,
+            limit=limit,
         )
 
     def download(self, doc_id: UUID) -> DownloadedDocument:
-        record = self.repo.get_or_raise(doc_id)
+        record = self.repo.get_or_raise_for_user(doc_id, self.user_id)
         try:
             content = self.storage.load(record.storage_path)
         except FileNotFoundInStorageError as exc:
@@ -143,7 +150,7 @@ class DocumentService:
         return DownloadedDocument(record, content)
 
     def update(self, doc_id: UUID, data: DocumentUpdate) -> DocumentBase:
-        record = self.repo.get_or_raise(doc_id)
+        record = self.repo.get_or_raise_for_user(doc_id, self.user_id)
         updates = data.model_dump(exclude_unset=True)
         updated = self.repo.update(record, updates)
         logger.info(
@@ -155,7 +162,7 @@ class DocumentService:
         return updated
 
     def delete(self, doc_id: UUID) -> None:
-        record = self.repo.get_or_raise(doc_id)
+        record = self.repo.get_or_raise_for_user(doc_id, self.user_id)
         key = record.storage_path
         self.repo.delete(record)
         # Remove the blob after the row delete is staged. delete() is idempotent,

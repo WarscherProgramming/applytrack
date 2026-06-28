@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class FollowUpService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, user_id: UUID) -> None:
+        self.user_id = user_id
         self.repo = FollowUpRepository(db)
         # All three cross-feature repos are injected to validate FK targets
         # before insert/update — yielding clean 404s instead of letting a
@@ -30,11 +31,11 @@ class FollowUpService:
         self.interview_repo = InterviewRepository(db)
 
     def create(self, data: FollowUpCreate) -> FollowUp:
-        self.application_repo.get_or_raise(data.application_id)
+        self.application_repo.get_or_raise_for_user(data.application_id, self.user_id)
         if data.recruiter_id is not None:
-            self.recruiter_repo.get_or_raise(data.recruiter_id)
+            self.recruiter_repo.get_or_raise_for_user(data.recruiter_id, self.user_id)
         if data.interview_id is not None:
-            self.interview_repo.get_or_raise(data.interview_id)
+            self.interview_repo.get_or_raise_for_user(data.interview_id, self.user_id)
 
         payload = data.model_dump()
         # A follow-up created already-completed gets a completed_at stamp so it
@@ -46,7 +47,7 @@ class FollowUpService:
         ):
             payload["completed_at"] = datetime.now(timezone.utc)
 
-        followup = self.repo.create(payload)
+        followup = self.repo.create(payload | {"user_id": self.user_id})
         logger.info(
             "Created followup id=%s application_id=%s status=%s",
             followup.id,
@@ -56,7 +57,7 @@ class FollowUpService:
         return followup
 
     def get(self, followup_id: UUID) -> FollowUp:
-        return self.repo.get_or_raise(followup_id)
+        return self.repo.get_or_raise_for_user(followup_id, self.user_id)
 
     def list(
         self,
@@ -83,25 +84,26 @@ class FollowUpService:
             overdue=overdue,
             due_today=due_today,
             due_this_week=due_this_week,
+            user_id=self.user_id,
             skip=skip,
             limit=limit,
         )
 
     def update(self, followup_id: UUID, data: FollowUpUpdate) -> FollowUp:
-        followup = self.repo.get_or_raise(followup_id)
+        followup = self.repo.get_or_raise_for_user(followup_id, self.user_id)
         updates = data.model_dump(exclude_unset=True)
 
         # Validate any FK target that is being changed to a non-null value.
         # Sending null for an optional FK is an explicit detach — always allowed.
         new_application_id = updates.get("application_id")
         if "application_id" in updates and new_application_id is not None:
-            self.application_repo.get_or_raise(new_application_id)
+            self.application_repo.get_or_raise_for_user(new_application_id, self.user_id)
         new_recruiter_id = updates.get("recruiter_id")
         if "recruiter_id" in updates and new_recruiter_id is not None:
-            self.recruiter_repo.get_or_raise(new_recruiter_id)
+            self.recruiter_repo.get_or_raise_for_user(new_recruiter_id, self.user_id)
         new_interview_id = updates.get("interview_id")
         if "interview_id" in updates and new_interview_id is not None:
-            self.interview_repo.get_or_raise(new_interview_id)
+            self.interview_repo.get_or_raise_for_user(new_interview_id, self.user_id)
 
         # Automatic completed_at management on status transitions.
         # The "completed_at" not in updates guard means an explicit client-sent
@@ -125,6 +127,6 @@ class FollowUpService:
         return updated
 
     def delete(self, followup_id: UUID) -> None:
-        followup = self.repo.get_or_raise(followup_id)
+        followup = self.repo.get_or_raise_for_user(followup_id, self.user_id)
         self.repo.delete(followup)
         logger.info("Deleted followup id=%s", followup_id)

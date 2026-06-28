@@ -58,13 +58,15 @@ class OpportunityDiscoveryService:
     def __init__(
         self,
         db: Session,
+        user_id: UUID,
         *,
         providers: dict[JobProviderName, JobProvider] | None = None,
         ai_client: AIClient | None = None,
     ) -> None:
         self.db = db
-        self.repo = OpportunityDiscoveryRepository(db)
-        self.resume_service = ResumeService(db)
+        self.user_id = user_id
+        self.repo = OpportunityDiscoveryRepository(db, user_id)
+        self.resume_service = ResumeService(db, user_id)
         self.scoring = OpportunityScoringEngine()
         self.providers = providers or {
             JobProviderName.GREENHOUSE: GreenhouseProvider(),
@@ -254,6 +256,7 @@ class OpportunityDiscoveryService:
                 OpportunityAIExplanationResult,
                 db=self.db,
                 feature=FEATURE,
+                user_id=self.user_id,
             )
             result = structured.data
             return OpportunityAIExplanation(

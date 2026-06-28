@@ -20,10 +20,11 @@ class ApplicationRepository(BaseRepository[JobApplication]):
         query: str | None = None,
         status: ApplicationStatus | None = None,
         company_id: UUID | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[JobApplication], int]:
-        base = select(JobApplication)
+        base = select(JobApplication).where(JobApplication.user_id == user_id)
 
         if query:
             base = base.where(JobApplication.job_title.ilike(f"%{query}%"))

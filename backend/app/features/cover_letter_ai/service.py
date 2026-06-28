@@ -52,10 +52,11 @@ class CoverLetterAIService:
     request so mock-mode simulation can personalise output to the company/role.
     """
 
-    def __init__(self, db: Session, *, ai_client: AIClient | None = None) -> None:
+    def __init__(self, db: Session, user_id: UUID, *, ai_client: AIClient | None = None) -> None:
         self.db = db
-        self.resume_service = ResumeService(db)
-        self.cover_letter_service = CoverLetterService(db)
+        self.user_id = user_id
+        self.resume_service = ResumeService(db, user_id)
+        self.cover_letter_service = CoverLetterService(db, user_id)
         self.application_repo = ApplicationRepository(db)
         self.company_repo = CompanyRepository(db)
         self._injected_client = ai_client
@@ -111,6 +112,7 @@ class CoverLetterAIService:
             CoverLetterGeneration,
             db=self.db,
             feature=FEATURE,
+            user_id=self.user_id,
         )
         generation = structured.data
         result = structured.result
@@ -150,8 +152,14 @@ class CoverLetterAIService:
         job_title = (data.job_title or "").strip()
 
         if data.application_id is not None:
-            application = self.application_repo.get_or_raise(data.application_id)
-            company = self.company_repo.get_or_raise(application.company_id)
+            application = self.application_repo.get_or_raise_for_user(
+                data.application_id,
+                self.user_id,
+            )
+            company = self.company_repo.get_or_raise_for_user(
+                application.company_id,
+                self.user_id,
+            )
             company_name = company_name or company.name
             job_title = job_title or application.job_title
 

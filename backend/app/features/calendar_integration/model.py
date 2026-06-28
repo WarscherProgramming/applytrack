@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import BaseModel
+from app.shared.ownership import UserOwnedMixin
 
 
 class CalendarProvider(StrEnum):
@@ -30,9 +31,11 @@ class CalendarSyncStatus(StrEnum):
     ERROR = "error"
 
 
-class CalendarConnection(BaseModel):
+class CalendarConnection(UserOwnedMixin, BaseModel):
     __tablename__ = "calendar_connections"
-    __table_args__ = (UniqueConstraint("provider", name="uq_calendar_connections_provider"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "provider", name="uq_calendar_connections_user_provider"),
+    )
 
     provider: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     status: Mapped[str] = mapped_column(
@@ -52,14 +55,15 @@ class CalendarConnection(BaseModel):
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class CalendarSyncEvent(BaseModel):
+class CalendarSyncEvent(UserOwnedMixin, BaseModel):
     __tablename__ = "calendar_sync_events"
     __table_args__ = (
         UniqueConstraint(
+            "user_id",
             "provider",
             "item_type",
             "item_id",
-            name="uq_calendar_sync_provider_item",
+            name="uq_calendar_sync_user_provider_item",
         ),
     )
 

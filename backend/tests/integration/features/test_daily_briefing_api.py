@@ -13,6 +13,7 @@ from app.features.daily_briefing.service import DailyBriefingService
 from app.features.followups.model import FollowUp, FollowUpPriority, FollowUpStatus, FollowUpType
 from app.features.gmail.models import EmailMessage, GmailAccount
 from app.features.interviews.model import Interview, InterviewStatus, InterviewType
+from app.features.users.model import User
 from app.main import app
 
 
@@ -33,14 +34,19 @@ def _mock_client(response: str | None = None) -> AIClient:
     return AIClient(MockProvider(default_response=payload), default_model="mock-model")
 
 
-def _inject_client(db: Session, client: AIClient | None = None) -> None:
+def _inject_client(db: Session, user: User, client: AIClient | None = None) -> None:
     app.dependency_overrides[_get_service] = lambda: DailyBriefingService(
-        db, ai_client=client or _mock_client()
+        db, user.id, ai_client=client or _mock_client()
     )
 
 
-def _seed_data(db: Session) -> None:
-    company = Company(name="Acme Health", industry="Healthcare", location="Remote")
+def _seed_data(db: Session, user: User) -> None:
+    company = Company(
+        name="Acme Health",
+        industry="Healthcare",
+        location="Remote",
+        user_id=user.id,
+    )
     db.add(company)
     db.flush()
     application = JobApplication(
@@ -49,6 +55,7 @@ def _seed_data(db: Session) -> None:
         status=ApplicationStatus.INTERVIEW.value,
         source="Opportunity Discovery: greenhouse",
         job_link="https://jobs.example.test/backend",
+        user_id=user.id,
     )
     db.add(application)
     db.flush()
@@ -63,6 +70,7 @@ def _seed_data(db: Session) -> None:
                 status=FollowUpStatus.PENDING.value,
                 priority=FollowUpPriority.HIGH.value,
                 due_date=today,
+                user_id=user.id,
             ),
             FollowUp(
                 application_id=application.id,
@@ -71,6 +79,7 @@ def _seed_data(db: Session) -> None:
                 status=FollowUpStatus.PENDING.value,
                 priority=FollowUpPriority.URGENT.value,
                 due_date=today - timedelta(days=2),
+                user_id=user.id,
             ),
             Interview(
                 application_id=application.id,
@@ -79,10 +88,11 @@ def _seed_data(db: Session) -> None:
                 duration_minutes=60,
                 status=InterviewStatus.SCHEDULED.value,
                 meeting_link="https://meet.example.test",
+                user_id=user.id,
             ),
         ]
     )
-    account = GmailAccount(email_address="jobseeker@example.test")
+    account = GmailAccount(email_address="jobseeker@example.test", user_id=user.id)
     db.add(account)
     db.flush()
     db.add(
@@ -101,16 +111,17 @@ def _seed_data(db: Session) -> None:
             application_id=application.id,
             match_confidence=0.95,
             match_reason="recruiting email",
+            user_id=user.id,
         )
     )
     db.flush()
 
 
 def test_daily_briefing_generates_sections_and_notifications(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, test_user: User
 ) -> None:
-    _seed_data(db)
-    _inject_client(db)
+    _seed_data(db, test_user)
+    _inject_client(db, test_user)
 
     response = client.post("/api/v1/daily-briefing/refresh")
 
@@ -132,9 +143,11 @@ def test_daily_briefing_generates_sections_and_notifications(
     assert {"follow_up", "interview", "gmail", "opportunity"} <= categories
 
 
-def test_notification_state_updates(client: TestClient, db: Session) -> None:
-    _seed_data(db)
-    _inject_client(db)
+def test_notification_state_updates(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    _seed_data(db, test_user)
+    _inject_client(db, test_user)
     client.post("/api/v1/daily-briefing/refresh")
     notification = client.get("/api/v1/daily-briefing/notifications").json()["items"][0]
 
@@ -162,9 +175,11 @@ def test_notification_state_updates(client: TestClient, db: Session) -> None:
     assert notification["id"] not in {item["id"] for item in active["items"]}
 
 
-def test_ai_failure_keeps_deterministic_briefing(client: TestClient, db: Session) -> None:
-    _seed_data(db)
-    _inject_client(db, _mock_client(response="not json"))
+def test_ai_failure_keeps_deterministic_briefing(
+    client: TestClient, db: Session, test_user: User
+) -> None:
+    _seed_data(db, test_user)
+    _inject_client(db, test_user, _mock_client(response="not json"))
 
     response = client.post("/api/v1/daily-briefing/refresh")
 

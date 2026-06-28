@@ -6,6 +6,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.features.auth.dependencies import CurrentUser
 from app.features.followups.model import (
     FollowUp,
     FollowUpPriority,
@@ -23,8 +24,11 @@ from app.features.followups.service import FollowUpService
 router = APIRouter(prefix="/followups", tags=["followups"])
 
 
-def _get_service(db: Annotated[Session, Depends(get_db)]) -> FollowUpService:
-    return FollowUpService(db)
+def _get_service(
+    db: Annotated[Session, Depends(get_db)],
+    user: CurrentUser,
+) -> FollowUpService:
+    return FollowUpService(db, user.id)
 
 
 ServiceDep = Annotated[FollowUpService, Depends(_get_service)]

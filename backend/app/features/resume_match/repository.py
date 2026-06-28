@@ -15,10 +15,11 @@ class ResumeMatchRepository(BaseRepository[ResumeMatchAnalysis]):
         self,
         *,
         resume_id: UUID | None = None,
+        user_id: UUID,
         skip: int = 0,
         limit: int = 50,
     ) -> tuple[list[ResumeMatchAnalysis], int]:
-        base = select(ResumeMatchAnalysis)
+        base = select(ResumeMatchAnalysis).where(ResumeMatchAnalysis.user_id == user_id)
         if resume_id is not None:
             base = base.where(ResumeMatchAnalysis.resume_id == resume_id)
 
