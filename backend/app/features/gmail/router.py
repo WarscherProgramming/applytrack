@@ -47,12 +47,7 @@ def gmail_callback(code: str, service: ServiceDep) -> RedirectResponse:
     """Real-OAuth redirect target. Exchanges the code, then returns the user to
     the frontend settings page."""
     service.handle_callback(code)
-    frontend = (
-        settings.BACKEND_CORS_ORIGINS[0]
-        if settings.BACKEND_CORS_ORIGINS
-        else "/"
-    )
-    return RedirectResponse(url=f"{frontend}/settings")
+    return RedirectResponse(url=f"{settings.FRONTEND_URL.rstrip('/')}/settings")
 
 
 @router.post("/disconnect", status_code=http_status.HTTP_204_NO_CONTENT)

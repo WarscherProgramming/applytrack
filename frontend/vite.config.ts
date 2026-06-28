@@ -3,11 +3,9 @@ import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-// The browser talks to the API directly via VITE_API_URL in development
-// (the backend container exposes :8000 on the host and its CORS policy allows
-// http://localhost:5173). In production VITE_API_URL is unset and the bundle
-// uses relative /api/* paths, which nginx proxies to the backend. Because of
-// that, no dev server proxy is required here.
+// The browser talks to the API directly via VITE_API_URL in development and on
+// Vercel. If VITE_API_URL is unset, the bundle uses relative /api/* paths for
+// same-origin Docker/nginx-style hosting. No dev server proxy is required here.
 export default defineConfig({
   plugins: [react()],
   resolve: {

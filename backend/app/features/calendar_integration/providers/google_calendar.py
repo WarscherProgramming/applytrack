@@ -17,11 +17,10 @@ class GoogleCalendarProvider(CalendarProviderAdapter):
         if not settings.GOOGLE_CLIENT_ID:
             return None
         scope = "https://www.googleapis.com/auth/calendar.events"
-        redirect = "http://localhost:8000/api/v1/calendar-integration/google/callback"
         params = urlencode(
             {
                 "client_id": settings.GOOGLE_CLIENT_ID,
-                "redirect_uri": redirect,
+                "redirect_uri": settings.GOOGLE_CALENDAR_REDIRECT_URI,
                 "response_type": "code",
                 "scope": scope,
                 "state": state or "applytrack-calendar",

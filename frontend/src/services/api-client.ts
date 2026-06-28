@@ -14,8 +14,10 @@ import {
  *  - Development: VITE_API_URL (e.g. http://localhost:8000) is set, so the
  *    browser hits the backend container directly. CORS on the API allows
  *    http://localhost:5173.
- *  - Production: VITE_API_URL is unset, so we fall back to a relative `/api/v1`
- *    path which nginx proxies to the backend service.
+ *  - Vercel production: VITE_API_URL should be set to the Render backend origin
+ *    (e.g. https://applytrack-api.onrender.com).
+ *  - Docker/nginx hosting: if VITE_API_URL is unset, the client falls back to a
+ *    relative `/api/v1` path for same-origin proxy setups.
  *
  * No component should import axios directly; they go through the typed service
  * modules in each feature's `api/` folder, which use this client.

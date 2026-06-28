@@ -51,8 +51,9 @@ skip:
 - **`main.py`** — app factory; registers every router under `settings.API_V1_PREFIX`
   (`/api/v1`); registers exception handlers; CORS; a `/health` endpoint.
 - **`core/config.py`** — `pydantic-settings` `Settings` loaded from `.env`
-  (DB, security, CORS, AI, storage, Gmail). Exposes derived properties such as
-  `ai_active_provider`, `ai_configured`, `gmail_simulation`, `is_production`.
+  (DB, security, CORS, frontend URL, AI, storage, Gmail/calendar OAuth).
+  Exposes derived properties such as `ai_active_provider`, `ai_configured`,
+  `gmail_simulation`, `is_production`, and rejects wildcard CORS in production.
 - **`core/logging.py`, `core/security.py`** — logging config; password hashing.
 - **`database/session.py`** — engine + `SessionLocal`; **`get_db()` owns the
   transaction**: it `commit()`s on success and `rollback()`s on any exception.
@@ -98,10 +99,11 @@ Mirrors the backend. Each feature in `features/<name>/` typically has:
 
 Shared layers:
 - **`services/api-client.ts`** - central Axios instance. Base URL is
-  `VITE_API_URL` + `/api/v1` in dev, or relative `/api/v1` in prod (nginx
-  proxies). It attaches JWT access tokens from `auth-tokens.ts`, refreshes once
-  on eligible 401 responses via `/auth/refresh`, retries the original request,
-  and normalizes error `status`.
+  `VITE_API_URL` + `/api/v1` for local dev and Vercel-to-Render deployments,
+  with a relative `/api/v1` fallback for same-origin Docker/nginx hosting. It
+  attaches JWT access tokens from `auth-tokens.ts`, refreshes once on eligible
+  401 responses via `/auth/refresh`, retries the original request, and
+  normalizes error `status`.
 - **`features/auth/`** - login/register API wrappers, token types, AuthProvider,
   protected-route wrapper, and token lifecycle helpers.
 - **`features/settings/`** - typed settings-center API wrappers and mutation
@@ -680,3 +682,26 @@ Milestone 32 adds GitHub Actions CI without deployment:
   the merged Docker Compose configuration using a CI-only non-secret `.env`.
 - **Security boundary:** workflows use local/mock configuration only; no
   deployment jobs and no production secrets are referenced.
+
+---
+
+## Deployment preparation architecture
+
+Milestone 33A prepares, but does not deploy, the first cloud target:
+
+- **Frontend:** Vercel hosts the Vite SPA. `VITE_API_URL` points to the Render
+  backend origin and `vercel.json` rewrites nested routes to `index.html`.
+- **Backend:** Render runs the FastAPI app with `uvicorn app.main:app --host
+  0.0.0.0 --port $PORT`. `render.yaml` is a starter blueprint with non-secret
+  placeholders and `/health` as the health check path.
+- **Database:** Render Postgres or Neon provides `DATABASE_URL`; Alembic
+  migrations are run manually rather than at startup.
+- **CORS/OAuth:** production CORS must list the exact Vercel origin. Gmail
+  redirects return to `FRONTEND_URL`; Gmail and Google Calendar callback URLs
+  are explicit environment variables.
+- **Storage:** local document storage remains the only implemented backend.
+  Durable production document storage requires a persistent disk or a future
+  object-storage milestone.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment steps, environment variables,
+smoke tests, rollback notes, and limitations.

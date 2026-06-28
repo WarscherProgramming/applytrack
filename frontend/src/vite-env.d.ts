@@ -2,7 +2,7 @@
 
 interface ImportMetaEnv {
   /** Base origin of the backend API, e.g. http://localhost:8000.
-   *  Unset in production builds, where relative /api/* paths are used. */
+   *  On Vercel production, set this to the Render backend origin. */
   readonly VITE_API_URL?: string;
 }
 

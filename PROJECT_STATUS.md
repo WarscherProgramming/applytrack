@@ -28,16 +28,15 @@ verification.
 - Database schema: Alembic revisions `0001` -> `0016`
 - Backend tests: **455 passing** (Docker-backed full suite), no external network
   calls.
-- Latest **committed** milestone: **M31 - Settings & Security** (`faf6636`)
-- Current `HEAD` includes Authentication, User Data Ownership, and Settings &
-  Security: protected auth routes, user-scoped records, `user_settings`,
-  account/profile preferences, notification preferences, password changes,
-  refresh-token session management, scoped JSON export, and the frontend
-  settings center.
-- **M32 - CI/CD Pipeline is implemented in the working tree but not yet
-  committed.** It adds GitHub Actions backend/frontend/Docker CI, dependency
-  caching, PostgreSQL-backed migration/test execution, frontend lint
-  configuration, Docker Compose validation, README status badge, and CI docs.
+- Latest **committed** milestone: **M32 - CI/CD Pipeline** (`43688b7`)
+- Current `HEAD` includes CI validation: GitHub Actions backend/frontend/Docker
+  CI, dependency caching, PostgreSQL-backed migration/test execution, frontend
+  lint configuration, Docker Compose validation, README status badge, and CI
+  docs.
+- **M33A - Deployment Preparation is implemented in the working tree but not
+  yet committed.** It adds Render/Vercel deployment preparation, complete
+  environment documentation, production CORS guardrails, explicit frontend API
+  configuration guidance, migration guidance, and `DEPLOYMENT.md`.
 
 ### Milestone History
 
@@ -66,7 +65,8 @@ verification.
 | **M29** | **Authentication** | **committed** |
 | **M30** | **User Data Ownership & Query Scoping** | **committed** |
 | **M31** | **Settings & Security** | **committed** |
-| **M32** | **CI/CD Pipeline** | **in working tree (uncommitted)** |
+| **M32** | **CI/CD Pipeline** | **committed** |
+| **M33A** | **Deployment Preparation** | **in working tree (uncommitted)** |
 
 ## 3. Completed Features
 
@@ -129,10 +129,16 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   migrations, frontend build/lint/typecheck, Docker image builds, and Docker
   Compose config validation.
 
+**Deployment Preparation**
+- **Deployment Preparation** (M33A) - Vercel/Render prep files, complete
+  `.env.example`, production CORS guardrails, explicit OAuth redirect settings,
+  migration guidance, smoke-test checklist, rollback notes, and documented local
+  file-storage limitation.
+
 ## 4. Current Roadmap
 
 Short term (recommended order):
-1. **Review and commit M32** (CI/CD Pipeline).
+1. **Review and commit M33A** (Deployment Preparation).
 2. **Copilot persistence** - persist pinned/completed recommendations and daily
    briefing history once authentication and user scoping exist.
 
@@ -166,9 +172,6 @@ Planned/aspirational:
   (the real feature).
 - **`integrations/gmail` stub is unused** - the real Gmail code lives in
   `features/gmail`.
-- **`.env.example` is incomplete.** It omits AI, storage, Gmail, and auth-related
-  settings read by `backend/app/core/config.py`, including
-  `REFRESH_TOKEN_EXPIRE_DAYS`.
 - **TypeScript build info is tracked.** `frontend/tsconfig.app.tsbuildinfo` and
   `frontend/tsconfig.node.tsbuildinfo` are generated build artifacts currently
   tracked by Git; consider removing them from the repository and ignoring

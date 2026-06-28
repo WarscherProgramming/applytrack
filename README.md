@@ -11,3 +11,7 @@ Tech Stack:
 - FastAPI
 - PostgreSQL
 - Docker
+
+Deployment preparation:
+- See [DEPLOYMENT.md](DEPLOYMENT.md) for the planned Vercel + Render + managed
+  Postgres setup.

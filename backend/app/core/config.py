@@ -2,7 +2,7 @@ import json
 from functools import lru_cache
 from typing import Any, Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,12 +11,14 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
     # Application
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     API_V1_PREFIX: str = "/api/v1"
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # Database
     DATABASE_URL: str
@@ -38,6 +40,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/gmail/callback"
+    GOOGLE_CALENDAR_REDIRECT_URI: str = (
+        "http://localhost:8000/api/v1/calendar-integration/google/callback"
+    )
     GMAIL_SIMULATION: bool = True
 
     # AI platform.
@@ -92,6 +97,12 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+    @model_validator(mode="after")
+    def validate_production_cors(self) -> "Settings":
+        if self.is_production and "*" in self.BACKEND_CORS_ORIGINS:
+            raise ValueError("BACKEND_CORS_ORIGINS must not contain '*' in production")
+        return self
 
     @property
     def is_development(self) -> bool:
