@@ -1,4 +1,11 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+
+import {
+  clearAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAuthTokens,
+} from './auth-tokens';
 
 /**
  * Centralised Axios instance — the single entry point for every backend call.
@@ -23,14 +30,46 @@ export const apiClient = axios.create({
   timeout: 15_000,
 });
 
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
 // Normalise the HTTP status onto the thrown error so the QueryClient's retry
 // policy and UI error handling can read `error.status` uniformly.
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
     if (error.response) {
       (error as AxiosError & { status?: number }).status =
         error.response.status;
+    }
+    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const url = original?.url ?? '';
+    const canRefresh =
+      error.response?.status === 401 &&
+      original &&
+      !original._retry &&
+      !url.includes('/auth/login') &&
+      !url.includes('/auth/register') &&
+      !url.includes('/auth/refresh');
+
+    if (canRefresh) {
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        try {
+          original._retry = true;
+          const response = await apiClient.post('/auth/refresh', {
+            refresh_token: refreshToken,
+          });
+          setAuthTokens(response.data.access_token, response.data.refresh_token);
+          original.headers.Authorization = `Bearer ${response.data.access_token}`;
+          return apiClient(original);
+        } catch {
+          clearAuthTokens();
+        }
+      }
     }
     return Promise.reject(error);
   },

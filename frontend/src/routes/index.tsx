@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 
+import { ProtectedRoute } from '@/features/auth/components/protected-route';
 import { AppLayout } from '@/layouts/app-layout';
 
 // Each page is code-split into its own chunk so the initial bundle only carries
@@ -86,6 +87,12 @@ const FollowupsPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('@/pages/settings-page').then((m) => ({ default: m.SettingsPage })),
 );
+const LoginPage = lazy(() =>
+  import('@/pages/login-page').then((m) => ({ default: m.LoginPage })),
+);
+const RegisterPage = lazy(() =>
+  import('@/pages/register-page').then((m) => ({ default: m.RegisterPage })),
+);
 const NotFoundPage = lazy(() =>
   import('@/pages/not-found-page').then((m) => ({ default: m.NotFoundPage })),
 );
@@ -95,9 +102,15 @@ const NotFoundPage = lazy(() =>
  * topbar) and nests every page via <Outlet />. A catch-all renders the 404.
  */
 export const router = createBrowserRouter([
+  { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
   {
     path: '/',
-    element: <AppLayout />,
+    element: (
+      <ProtectedRoute>
+        <AppLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <CareerCopilotPage /> },
       { path: 'dashboard', element: <DashboardPage /> },

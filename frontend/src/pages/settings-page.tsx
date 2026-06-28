@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { AccountSettingsCard } from '@/features/auth/components/account-settings-card';
 import { EmailTimeline } from '@/features/gmail/components/email-timeline';
 import { CalendarIntegrationSettingsCard } from '@/features/calendar-integration/components/calendar-integration-settings-card';
 import { GmailSettingsCard } from '@/features/gmail/components/gmail-settings-card';
@@ -61,11 +62,12 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>
-            Authentication arrives in a later milestone. This is a placeholder
+      <AccountSettingsCard />
+      {/*
+        <Card>
+          <CardHeader>
+            <CardTitle>Account</CardTitle>
+            <CardDescription>
             for the signed-in user’s profile and security settings.
           </CardDescription>
         </CardHeader>
@@ -82,6 +84,7 @@ export function SettingsPage() {
           </dl>
         </CardContent>
       </Card>
+      */}
 
       <GmailSettingsCard />
 

@@ -5,6 +5,7 @@
 #   from app.features.<name>.model import <Name>  # noqa: F401
 from app.ai.usage_tracker import AIUsageRecord  # noqa: F401
 from app.features.applications.model import JobApplication  # noqa: F401
+from app.features.auth.model import RefreshToken  # noqa: F401
 from app.features.calendar_integration.model import (  # noqa: F401
     CalendarConnection,
     CalendarSyncEvent,
@@ -20,4 +21,5 @@ from app.features.recruiters.model import Recruiter  # noqa: F401
 from app.features.resume_match.model import ResumeMatchAnalysis  # noqa: F401
 from app.features.resumes.model import Resume  # noqa: F401
 from app.features.tasks.model import Task  # noqa: F401
+from app.features.users.model import User  # noqa: F401
 from app.shared.base_model import Base  # noqa: F401

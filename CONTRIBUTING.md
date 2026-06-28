@@ -33,6 +33,7 @@ with an ICS no-OAuth fallback. To enable real services, set the relevant keys
 | `AI_MODEL` | `gpt-4o-mini` | Default model |
 | `AI_MAX_RETRIES` | `2` | Transient-failure retries |
 | `AI_REQUEST_TIMEOUT` | `30.0` | Per-request timeout (s) |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Auth refresh-token lifetime |
 | `STORAGE_BACKEND` | `local` | File storage backend |
 | `STORAGE_LOCAL_PATH` | `storage` | Local storage root (relative to `/app`) |
 | `STORAGE_MAX_UPLOAD_BYTES` | `10485760` | Max upload size (10 MB) |
@@ -113,8 +114,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pip 
 
 Tests use a separate `<db>_test` database, roll back per test, and make **no
 external network calls**. Keep it that way: use the `MockProvider` / injected
-`AIClient` for AI, the simulated Gmail client, and simulated calendar provider
-adapters.
+`AIClient` for AI, the simulated Gmail client, simulated calendar provider
+adapters, and deterministic auth tokens/password hashes in auth tests.
 
 ### Frontend (run inside the frontend container or locally in `frontend/`)
 

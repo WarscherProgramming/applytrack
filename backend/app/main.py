@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.exceptions.handlers import register_exception_handlers
 from app.features.applications.router import router as applications_router
+from app.features.auth.router import router as auth_router
 from app.features.calendar_integration.router import router as calendar_integration_router
 from app.features.career_copilot.router import router as career_copilot_router
 from app.features.career_intelligence.router import router as career_intelligence_router
@@ -26,6 +27,7 @@ from app.features.recruiters.router import router as recruiters_router
 from app.features.resume_match.router import router as resume_match_router
 from app.features.resumes.router import router as resumes_router
 from app.features.tasks.router import router as tasks_router
+from app.features.users.router import router as users_router
 
 configure_logging()
 
@@ -60,6 +62,8 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
+app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+app.include_router(users_router, prefix=settings.API_V1_PREFIX)
 app.include_router(companies_router, prefix=settings.API_V1_PREFIX)
 app.include_router(applications_router, prefix=settings.API_V1_PREFIX)
 app.include_router(recruiters_router, prefix=settings.API_V1_PREFIX)
