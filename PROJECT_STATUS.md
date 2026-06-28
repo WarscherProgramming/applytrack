@@ -22,16 +22,17 @@ quality at each step: strict layering, tests, and migrations.
 
 - Backend version: `0.1.0` (`backend/pyproject.toml`)
 - Frontend version: `0.1.0` (`frontend/package.json`)
-- Database schema: Alembic revisions `0001` → `0011`
-- Backend tests: **436 passing** (last full run), no external network calls
-- Latest **committed** milestone: **M25 — Opportunity Discovery Engine** (`c0ca5bd`)
-- Current `HEAD` includes Opportunity Discovery: public provider adapters,
-  normalized postings, deterministic scoring, AI score explanations, and
-  one-click save into Companies + Applications. It does not add tables or
-  migrations.
-- **M26 — Daily Briefing & Notifications is implemented in the working tree but
-  not yet committed.** It adds the `daily_briefing` feature, `notifications`
-  table/migration, Daily Briefing frontend page, and notification center panel.
+- Database schema: Alembic revisions `0001` → `0012`
+- Backend tests: **436 passing** on the last full committed run; M27 adds 4
+  calendar integration tests pending Docker-backed execution in this workspace.
+- Latest **committed** milestone: **M26 — Daily Briefing & Notifications** (`f5c31bd`)
+- Current `HEAD` includes Daily Briefing & Notifications: proactive briefing,
+  notification records, notification center UI, and the `notifications`
+  migration.
+- **M27 — Calendar Integration is implemented in the working tree but not yet
+  committed.** It adds the `calendar_integration` feature, Google/Outlook
+  provider foundations, ICS export, calendar sync settings UI, interview sync
+  controls, and the `calendar_connections` / `calendar_sync_events` migration.
 
 ### Milestone history (from git)
 
@@ -54,7 +55,8 @@ quality at each step: strict layering, tests, and migrations.
 | **M23** | **AI Career Copilot** | **committed** |
 | **M24** | **AI Job Intelligence Engine** | **committed** |
 | **M25** | **Opportunity Discovery Engine** | **committed** |
-| **M26** | **Daily Briefing & Notifications** | **in working tree (uncommitted)** |
+| **M26** | **Daily Briefing & Notifications** | **committed** |
+| **M27** | **Calendar Integration** | **in working tree (uncommitted)** |
 
 ## 3. Completed features
 
@@ -107,14 +109,19 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   prioritized action list, follow-up/interview/Gmail/opportunity/AI insight
   notifications with unread/read, pinned/unpinned, dismissed, priority, and
   category state.
+- **Calendar Integration** (M27) — external calendar sync foundation for
+  interviews and follow-up reminders. Google and Outlook are provider adapters
+  running in deterministic simulation mode until real OAuth token exchange/API
+  writes are enabled; ICS export works without OAuth. Sync is idempotent via
+  stored external event IDs and event hashes.
 - **AI usage tracking** — every AI call is recorded in `ai_usage_records`
   (provider, model, tokens, estimated cost, latency, feature).
 
 ## 4. Current roadmap
 
 Short term (recommended order):
-1. **Review and commit M26** (Daily Briefing & Notifications).
-2. **M27 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
+1. **Review and commit M27** (Calendar Integration).
+2. **M28 — Authentication & Multi-User Foundation** — _the biggest gap_ (see
    §5). The app is
    currently single-user with no auth; the Settings page explicitly says
    "Authentication arrives in a later milestone."
@@ -122,7 +129,8 @@ Short term (recommended order):
    briefing history once authentication/user scoping exists.
 
 Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
-- Google Calendar integration (`integrations/google_calendar` stub exists).
+- Real calendar OAuth token exchange and external provider writes beyond the
+  M27 simulation-mode foundations.
 - Attachments and richer analytics (feature stubs exist).
 - Chrome extension for one-click application capture.
 
@@ -137,7 +145,9 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
   API; the cost table in `ai/usage_tracker.py` is a static estimate. Gmail's
   real OAuth path exists but the default is simulation — real Google credentials
   are untested. Opportunity Discovery provider adapters are covered with mocked
-  payloads but have not been validated against live boards/feed URLs.
+  payloads but have not been validated against live boards/feed URLs. Calendar
+  Integration has Google/Outlook provider foundations and deterministic sync
+  simulation, but no real token exchange or external calendar write calls yet.
 - **AI "streaming" is simulated.** Generation is a single synchronous request;
   the UI shows an animated progress indicator, not true token streaming.
 - **Storage is local-disk only.** The `FileStorage` abstraction is designed for
@@ -188,7 +198,7 @@ Planned/aspirational (per `PROJECT.md` and existing scaffold stubs):
 
 ## 7. Next recommended milestone
 
-**M27 — Authentication & Multi-User Foundation.**
+**M28 — Authentication & Multi-User Foundation.**
 
 Rationale: every other feature is built and stable, but the entire data model is
 unscoped to a user and the Settings UI already advertises forthcoming auth. This
@@ -202,5 +212,5 @@ Suggested shape (consistent with existing patterns):
 - Frontend: login/register, auth context, token handling in `api-client.ts`,
   route guards; flesh out the Settings → Account card.
 
-Before starting M27, consider tackling the §5 cleanup items (delete stub dirs,
+Before starting M28, consider tackling the §5 cleanup items (delete stub dirs,
 complete `.env.example`, and stop tracking generated TypeScript build info).

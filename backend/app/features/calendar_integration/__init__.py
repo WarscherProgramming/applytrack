@@ -1,0 +1,1 @@
+"""External calendar integration feature."""

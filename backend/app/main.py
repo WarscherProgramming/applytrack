@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.exceptions.handlers import register_exception_handlers
 from app.features.applications.router import router as applications_router
+from app.features.calendar_integration.router import router as calendar_integration_router
 from app.features.career_copilot.router import router as career_copilot_router
 from app.features.career_intelligence.router import router as career_intelligence_router
 from app.features.companies.router import router as companies_router
@@ -74,6 +75,7 @@ app.include_router(career_copilot_router, prefix=settings.API_V1_PREFIX)
 app.include_router(job_intelligence_router, prefix=settings.API_V1_PREFIX)
 app.include_router(opportunity_discovery_router, prefix=settings.API_V1_PREFIX)
 app.include_router(daily_briefing_router, prefix=settings.API_V1_PREFIX)
+app.include_router(calendar_integration_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["infrastructure"])

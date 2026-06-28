@@ -19,8 +19,9 @@ cp .env.example .env
 `.env` is gitignored — never commit it. Generate a real secret with
 `openssl rand -hex 32` for `SECRET_KEY`.
 
-The app runs with **no external credentials**: AI defaults to the mock provider
-and Gmail to simulation mode. To enable real services, set the relevant keys
+The app runs with **no external credentials**: AI defaults to the mock provider,
+Gmail to simulation mode, and calendar sync to deterministic simulation mode
+with an ICS no-OAuth fallback. To enable real services, set the relevant keys
 (these are read by `backend/app/core/config.py` and currently **not** listed in
 `.env.example` — see PROJECT_STATUS §5):
 
@@ -35,7 +36,7 @@ and Gmail to simulation mode. To enable real services, set the relevant keys
 | `STORAGE_BACKEND` | `local` | File storage backend |
 | `STORAGE_LOCAL_PATH` | `storage` | Local storage root (relative to `/app`) |
 | `STORAGE_MAX_UPLOAD_BYTES` | `10485760` | Max upload size (10 MB) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | _(empty)_ | Real Gmail OAuth |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | _(empty)_ | Real Gmail OAuth; calendar OAuth foundation reuses the client id |
 | `GOOGLE_REDIRECT_URI` | `http://localhost:8000/api/v1/gmail/callback` | OAuth redirect |
 | `GMAIL_SIMULATION` | `true` | Use the fake Gmail client |
 
@@ -112,7 +113,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pip 
 
 Tests use a separate `<db>_test` database, roll back per test, and make **no
 external network calls**. Keep it that way: use the `MockProvider` / injected
-`AIClient` for AI and the simulated Gmail client.
+`AIClient` for AI, the simulated Gmail client, and simulated calendar provider
+adapters.
 
 ### Frontend (run inside the frontend container or locally in `frontend/`)
 
@@ -172,8 +174,8 @@ A milestone is complete only when **all** of the following hold:
    new routes are lazy-loaded in `routes/index.tsx` and added to
    `app/navigation.ts`.
 6. **Docker works** — the dev stack builds and runs; a manual end-to-end check of
-   the new flow succeeds (the app must work fully offline via mock AI /
-   simulated Gmail).
+   the new flow succeeds (the app must work fully offline via mock AI,
+   simulated Gmail, and simulated calendar sync where applicable).
 7. **No regressions** — existing tests still pass; existing features unaffected
    (notably: do not modify Gmail behaviour or revert the Vite `manualChunks`
    config).

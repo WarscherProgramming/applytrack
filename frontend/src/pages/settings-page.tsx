@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { EmailTimeline } from '@/features/gmail/components/email-timeline';
+import { CalendarIntegrationSettingsCard } from '@/features/calendar-integration/components/calendar-integration-settings-card';
 import { GmailSettingsCard } from '@/features/gmail/components/gmail-settings-card';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/use-theme';
@@ -83,6 +84,8 @@ export function SettingsPage() {
       </Card>
 
       <GmailSettingsCard />
+
+      <CalendarIntegrationSettingsCard />
 
       {/* Global imported-email timeline. The same component scopes to a single
           entity via an id prop, ready to embed in detail views. */}

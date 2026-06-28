@@ -5,6 +5,10 @@
 #   from app.features.<name>.model import <Name>  # noqa: F401
 from app.ai.usage_tracker import AIUsageRecord  # noqa: F401
 from app.features.applications.model import JobApplication  # noqa: F401
+from app.features.calendar_integration.model import (  # noqa: F401
+    CalendarConnection,
+    CalendarSyncEvent,
+)
 from app.features.companies.model import Company  # noqa: F401
 from app.features.cover_letters.model import CoverLetter  # noqa: F401
 from app.features.daily_briefing.model import Notification  # noqa: F401

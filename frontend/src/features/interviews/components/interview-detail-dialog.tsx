@@ -1,6 +1,7 @@
 import { format, parseISO } from 'date-fns';
 import {
   Building2,
+  CalendarSync,
   CalendarClock,
   Clock,
   Copy,
@@ -23,6 +24,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { useSyncInterviewToCalendar } from '@/features/calendar-integration/hooks';
 import type { EnrichedInterview } from '@/features/calendar/types';
 import { useToast } from '@/hooks/use-toast';
 import { humanizeEnum } from '@/utils/format';
@@ -58,6 +60,7 @@ export function InterviewDetailDialog({
   onViewApplication,
 }: InterviewDetailDialogProps) {
   const { toast } = useToast();
+  const syncInterview = useSyncInterviewToCalendar();
   if (!enriched) return null;
 
   const { interview, companyName, jobTitle, recruiterName } = enriched;
@@ -72,6 +75,25 @@ export function InterviewDetailDialog({
     } catch {
       toast({ variant: 'destructive', title: 'Could not copy link' });
     }
+  }
+
+  function syncToCalendar() {
+    syncInterview.mutate(
+      { interviewId: interview.id, provider: 'google' },
+      {
+        onSuccess: (result) =>
+          toast({
+            title: 'Interview synced',
+            description: `${result.created} created, ${result.updated} updated, ${result.skipped} unchanged.`,
+          }),
+        onError: () =>
+          toast({
+            variant: 'destructive',
+            title: 'Calendar sync failed',
+            description: 'Connect Google Calendar from Settings before syncing.',
+          }),
+      },
+    );
   }
 
   return (
@@ -166,6 +188,15 @@ export function InterviewDetailDialog({
           >
             <Building2 className="h-4 w-4" />
             View application
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={syncToCalendar}
+            disabled={syncInterview.isPending}
+          >
+            <CalendarSync className="h-4 w-4" />
+            Sync calendar
           </Button>
           <Button
             size="sm"
