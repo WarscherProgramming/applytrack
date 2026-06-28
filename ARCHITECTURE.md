@@ -664,3 +664,19 @@ cover_letter_ai (templates) and interview_ai.
   (includes `tsc -b`), `npm run lint`, `npm run typecheck`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for exact commands.
+
+---
+
+## CI/CD architecture
+
+Milestone 32 adds GitHub Actions CI without deployment:
+
+- **Backend CI:** Python 3.12, pip cache, PostgreSQL 16 service, Alembic
+  migrations, and the full pytest suite. Ruff and mypy run as advisory checks
+  because the repository has pre-existing lint/type debt.
+- **Frontend CI:** Node 22, npm cache, `npm ci`, production build, ESLint, and
+  TypeScript typecheck.
+- **Docker CI:** Buildx builds production backend/frontend images and validates
+  the merged Docker Compose configuration using a CI-only non-secret `.env`.
+- **Security boundary:** workflows use local/mock configuration only; no
+  deployment jobs and no production secrets are referenced.

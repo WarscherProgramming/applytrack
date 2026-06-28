@@ -5,10 +5,8 @@ FROM node:22-alpine AS development
 
 WORKDIR /app
 
-COPY package.json ./
-# npm install rather than npm ci: no lockfile exists yet.
-# Switch to `npm ci` after committing package-lock.json.
-RUN npm install
+COPY package*.json ./
+RUN npm ci
 
 # Bake the build/tooling config into the image. docker-compose.dev.yml only
 # volume-mounts ./src and ./index.html, so these files must be present here or
@@ -30,8 +28,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install
+COPY package*.json ./
+RUN npm ci
 
 COPY . .
 RUN npm run build

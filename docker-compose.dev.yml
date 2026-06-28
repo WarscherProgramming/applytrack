@@ -28,6 +28,7 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
+      - ./frontend/eslint.config.js:/app/eslint.config.js
     ports:
       - "5173:5173"
     environment:

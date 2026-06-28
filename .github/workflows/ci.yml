@@ -1,0 +1,157 @@
+name: ApplyTrack CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: applytrack-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/applytrack
+  SECRET_KEY: ci-only-secret-key-not-used-for-production
+  BACKEND_CORS_ORIGINS: '["http://localhost:5173"]'
+  GMAIL_SIMULATION: "true"
+  AI_PROVIDER: mock
+
+jobs:
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: applytrack
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d applytrack"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run Alembic migrations
+        run: alembic upgrade head
+
+      - name: Run backend tests
+        run: python -m pytest -q
+
+      - name: Run Ruff (advisory until existing lint debt is cleaned up)
+        continue-on-error: true
+        run: ruff check .
+
+      - name: Run mypy (advisory until existing typing debt is cleaned up)
+        continue-on-error: true
+        run: mypy app
+
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run frontend lint
+        run: npm run lint
+
+      - name: Run frontend typecheck
+        run: npm run typecheck
+
+  docker:
+    name: Docker CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: production
+          tags: applytrack-backend:ci
+          load: true
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: production
+          tags: applytrack-frontend:ci
+          load: true
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Create CI compose environment
+        run: |
+          cat > .env <<'EOF'
+          POSTGRES_DB=applytrack
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          DATABASE_URL=postgresql://postgres:postgres@postgres:5432/applytrack
+          SECRET_KEY=ci-only-secret-key-not-used-for-production
+          BACKEND_CORS_ORIGINS=["http://localhost:5173"]
+          GMAIL_SIMULATION=true
+          AI_PROVIDER=mock
+          EOF
+
+      - name: Validate Docker Compose config
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet

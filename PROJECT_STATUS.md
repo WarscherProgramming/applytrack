@@ -28,18 +28,16 @@ verification.
 - Database schema: Alembic revisions `0001` -> `0016`
 - Backend tests: **455 passing** (Docker-backed full suite), no external network
   calls.
-- Latest **committed** milestone: **M30 - User Data Ownership & Query Scoping**
-  (`696a125`)
-- Current `HEAD` includes Authentication and User Data Ownership: `auth` and
-  `users` features, `users` and `auth_refresh_tokens` tables, protected route
-  dependency, frontend token handling, route guards, user ownership columns,
-  scoped services/repositories, safe local/demo backfill, per-user uniqueness/
-  dedupe constraints, and cross-user 404 behavior.
-- **M31 - Settings & Security is implemented in the working tree but not yet
-  committed.** It adds a dedicated settings feature, `user_settings` table,
+- Latest **committed** milestone: **M31 - Settings & Security** (`faf6636`)
+- Current `HEAD` includes Authentication, User Data Ownership, and Settings &
+  Security: protected auth routes, user-scoped records, `user_settings`,
   account/profile preferences, notification preferences, password changes,
-  refresh-token session management, scoped JSON export, and a frontend settings
-  center.
+  refresh-token session management, scoped JSON export, and the frontend
+  settings center.
+- **M32 - CI/CD Pipeline is implemented in the working tree but not yet
+  committed.** It adds GitHub Actions backend/frontend/Docker CI, dependency
+  caching, PostgreSQL-backed migration/test execution, frontend lint
+  configuration, Docker Compose validation, README status badge, and CI docs.
 
 ### Milestone History
 
@@ -67,7 +65,8 @@ verification.
 | **M28** | **Task System** | **committed** |
 | **M29** | **Authentication** | **committed** |
 | **M30** | **User Data Ownership & Query Scoping** | **committed** |
-| **M31** | **Settings & Security** | **in working tree (uncommitted)** |
+| **M31** | **Settings & Security** | **committed** |
+| **M32** | **CI/CD Pipeline** | **in working tree (uncommitted)** |
 
 ## 3. Completed Features
 
@@ -126,11 +125,14 @@ All routers are registered in `backend/app/main.py` under the `/api/v1` prefix.
   notification preferences, app preferences, strong password changes,
   refresh-token-backed session actions, scoped JSON export, and a frontend
   settings center.
+- **CI/CD Pipeline** (M32) - GitHub Actions workflow for backend tests and
+  migrations, frontend build/lint/typecheck, Docker image builds, and Docker
+  Compose config validation.
 
 ## 4. Current Roadmap
 
 Short term (recommended order):
-1. **Review and commit M31** (Settings & Security).
+1. **Review and commit M32** (CI/CD Pipeline).
 2. **Copilot persistence** - persist pinned/completed recommendations and daily
    briefing history once authentication and user scoping exist.
 
@@ -174,7 +176,9 @@ Planned/aspirational:
 
 **Testing / tooling**
 - **No frontend tests** beyond `build` / `lint` / `typecheck` (no unit or E2E).
-- **No CI pipeline** configured; tests/build are run manually.
+- **Backend Ruff and mypy are advisory in CI for now.** They run in GitHub
+  Actions, but existing lint/type debt prevents making them required without a
+  dedicated cleanup milestone.
 - Migrations are **applied manually** (`alembic upgrade head`); there is no
   startup auto-migrate.
 - Cosmetic: a Starlette/httpx `TestClient` deprecation warning appears in test

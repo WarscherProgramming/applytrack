@@ -134,6 +134,32 @@ npm run typecheck   # tsc --noEmit
 There are no frontend unit/E2E tests yet; `build` (type-checks) + `lint` are the
 quality gates.
 
+## CI workflow
+
+GitHub Actions runs `.github/workflows/ci.yml` on pull requests and pushes to
+`main`.
+
+**Backend CI**
+- Sets up Python 3.12 with pip caching.
+- Installs `backend` with dev dependencies via `pip install -e ".[dev]"`.
+- Starts a PostgreSQL 16 service.
+- Runs `alembic upgrade head`.
+- Runs `python -m pytest -q`.
+- Runs `ruff check .` and `mypy app` as advisory checks until the existing
+  backend lint/type debt is cleaned up.
+
+**Frontend CI**
+- Sets up Node 22 with npm caching.
+- Installs dependencies with `npm ci`.
+- Runs `npm run build`, `npm run lint`, and `npm run typecheck`.
+
+**Docker CI**
+- Builds the backend and frontend production Docker images.
+- Creates a CI-only `.env` with non-secret local values.
+- Runs `docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet`.
+
+No deployment is configured in M32, and no production secrets are required.
+
 ## Branch workflow
 
 - **Default branch:** `main`.
